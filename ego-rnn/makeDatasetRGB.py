@@ -10,9 +10,9 @@ import random
 
 
 def gen_split(root_dir, stackSize):
-    Dataset = []
-    Labels = []
-    NumFrames = []
+    Dataset = [] #Path to RGB frame
+    Labels = [] #Labels
+    NumFrames = [] #
     root_dir = os.path.join(root_dir, 'processed_frames2')
     for dir_user in sorted(os.listdir(root_dir)):
         print('dir_user' + dir_user)
