@@ -53,15 +53,15 @@ class makeDataset(Dataset):
         self.fmt = '.png'
 
     def __len__(self):
-        return len(self.Dataset_OpticalFlowX)
+        return len(self.dataset_OpticalFlowX)
 
     def __getitem__(self, idx): #dataset[idx]
         vid_nameX = self.dataset_OpticalFlowX[idx]
         vid_nameY = self.dataset_OpticalFlowY[idx]
-        vid_nameF = self.Dataset_RGBFrame[idx]
+        vid_nameF = self.dataset_RGBFrame[idx]
 
         label = self.labels[idx]
-        numFrame = self.NumFrames[idx]
+        numFrame = self.numFrames[idx]
 
         inpSeq = []
 
