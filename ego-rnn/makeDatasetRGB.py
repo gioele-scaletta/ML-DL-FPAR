@@ -34,7 +34,6 @@ def gen_split(root_dir,train_dataset_folder, stackSize = 5):
               numFrames = len(glob.glob1(inst_dir, '*[0-9].png')) # nome dei file per ogni azione [0-9 indica numero generico]
               if numFrames >= stackSize: # numero di frame sufficiente
                 NumFrames.append(numFrames) # numero di frame x ogni folder
-                Labels.append(class_id)
                 Dataset_OpticalFlowX.append(inst_dir)
                 Labels.append(class_id) # numero della classe del azione
                 Dataset_RGBFrame.append(os.path.join(inst_dir.replace('flow_x_processed', 'processed_frames2'), "rgb"))
