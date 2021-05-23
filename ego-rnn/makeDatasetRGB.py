@@ -59,6 +59,7 @@ class makeDataset(Dataset):
         vid_nameX = self.dataset_OpticalFlowX[idx]
         vid_nameY = self.dataset_OpticalFlowY[idx]
         vid_nameF = self.dataset_RGBFrame[idx]
+        print(vid_nameF)
 
         label = self.labels[idx]
         numFrame = self.numFrames[idx]
