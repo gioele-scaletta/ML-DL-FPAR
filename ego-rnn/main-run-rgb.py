@@ -9,9 +9,6 @@ import sys
 
 DEVICE = "cuda"
 
-
-DEVICE = "cuda"
-
 def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen, trainBatchSize,
              valBatchSize, numEpochs, lr1, decay_factor, decay_step, memSize):
     
