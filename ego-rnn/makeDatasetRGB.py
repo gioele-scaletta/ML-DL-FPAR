@@ -44,7 +44,7 @@ def gen_split(root_dir,train_dataset_folder, stackSize = 5):
     return Dataset_RGBFrame, Dataset_OpticalFlowX, Dataset_OpticalFlowY, Labels, NumFrames
 
 class makeDataset(Dataset):
-    def __init__(self, root_dir,train_dataset_folder, spatial_transform=None, seqLen=7, train=True):
+    def __init__(self, root_dir,train_dataset_folder, spatial_transform, seqLen=7, train=True):
         self.dataset_RGBFrame, self.dataset_OpticalFlowX, self.dataset_OpticalFlowY, self.labels, self.numFrames = gen_split(root_dir,train_dataset_folder, 5)
         self.spatial_transform = spatial_transform
         self.train = train
