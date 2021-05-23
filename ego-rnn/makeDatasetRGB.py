@@ -37,7 +37,7 @@ def gen_split(root_dir,train_dataset_folder, stackSize = 5):
                 Labels.append(class_id)
                 Dataset_OpticalFlowX.append(inst_dir)
                 Labels.append(class_id) # numero della classe del azione
-                Dataset_RGBFrame.append(os.path.join(inst_dir.replace('flow_x_processed', 'processed_frames'), "rgb"))
+                Dataset_RGBFrame.append(os.path.join(inst_dir.replace('flow_x_processed', 'processed_frames2'), "rgb"))
                 #print(inst_dir)
                 Dataset_OpticalFlowY.append(inst_dir.replace('flow_x_processed', 'flow_y_processed'))
         class_id += 1
@@ -67,7 +67,7 @@ class makeDataset(Dataset):
 
         self.spatial_transform.randomize_parameters()
         for i in np.linspace(1, numFrame, self.seqLen, endpoint=False): 
-            fl_name = vid_nameX + '/' + 'rgb' + str(int(np.floor(i))).zfill(4) + self.fmt
+            fl_name = vid_nameF + '/' + 'rgb' + str(int(np.floor(i))).zfill(4) + self.fmt
             img = Image.open(fl_name)
             inpSeq.append(self.spatial_transform(img.convert('RGB')))
         inpSeq = torch.stack(inpSeq, 0)
