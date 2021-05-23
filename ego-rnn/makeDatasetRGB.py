@@ -41,6 +41,7 @@ def gen_split(root_dir,train_dataset_folder, stackSize = 5):
                 #print(inst_dir)
                 Dataset_OpticalFlowY.append(inst_dir.replace('flow_x_processed', 'flow_y_processed'))
         class_id += 1
+    print(Dataset_RGBFrame)
     return Dataset_RGBFrame, Dataset_OpticalFlowX, Dataset_OpticalFlowY, Labels, NumFrames
 
 class makeDataset(Dataset):
