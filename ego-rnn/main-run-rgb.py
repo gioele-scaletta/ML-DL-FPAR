@@ -183,14 +183,18 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
                 for j, (inputs, targets) in enumerate(val_loader):
                     val_iter += 1
                     val_samples += inputs.size(0)
-                    inputVariable = Variable(inputs.permute(1, 0, 2, 3, 4).cuda(), volatile=True)
-                    labelVariable = Variable(targets.cuda(non_blocking=True), volatile=True)
-                    output_label, _ = model(inputVariable)
-                    val_loss = loss_fn(output_label, labelVariable)
-                    val_loss_epoch += val_loss.data[0]
+                    inputVariable = Variable(inputs.permute(1, 0, 2, 3, 4).to(DEVICE))
+                    labelVariable = Variable(targets.to(DEVICE))
+                    with torch.no_grad():
+                      output_label, _ = model(inputVariable)
+                      val_loss = loss_fn(output_label, labelVariable)
+                      val_loss_epoch += val_loss.item()
+                    #output_label, _ = model(inputVariable)
+                    #val_loss = loss_fn(output_label, labelVariable)
+                    #val_loss_epoch += val_loss.item()
                     _, predicted = torch.max(output_label.data, 1)
-                    numCorr += (predicted == targets.cuda()).sum()
-                val_accuracy = (numCorr / val_samples) * 100
+                    numCorr += (predicted == targets.to(DEVICE)).sum()
+                val_accuracy = (numCorr / val_samples)
                 avg_val_loss = val_loss_epoch / val_iter
                 print('Val: Epoch = {} | Loss {} | Accuracy = {}'.format(epoch + 1, avg_val_loss, val_accuracy))
                 writer.add_scalar('val/epoch_loss', avg_val_loss, epoch + 1)
@@ -217,15 +221,15 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
 
 
 def __main__():
-
+    stage = 1
     trainDatasetDir = './GTEA61'
-    valDatasetDir = None
-    stage1_dict = None
+    valDatasetDir = './GTEA61'
+    stage1Dict = None
     outDir = 'res' # label for folder name
     seqLen = 7 # number of frames
     trainBatchSize = 32 # bnumber of training samples to work through before the model’s internal parameters are update
     valBatchSize = 32  # da valutare se 32 o 64
-    numEpochs = 300 # 7 frame dovrebbe essere veloce
+    numEpochs = 4 # 7 frame dovrebbe essere veloce
     lr1 = 1e-3 #defauld Learning rate
     decayRate = 0.1 #Learning rate decay rate
     stepSize = [50,125,200]
@@ -233,7 +237,7 @@ def __main__():
 
 
     #Stage 1
-    main_run(stage = 1,
+    main_run(1,
             trainDatasetDir,
             valDatasetDir,
             stage1Dict,
@@ -242,8 +246,10 @@ def __main__():
             trainBatchSize,
             valBatchSize,
             numEpochs, 
-            lr1, decayRate, 
+            lr1, 
+            decayRate, 
             stepSize,
             memSize)
 
 __main__()
+
