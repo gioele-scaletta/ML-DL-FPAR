@@ -21,6 +21,7 @@ def gen_split(root_dir,train_dataset_folder, stackSize = 5):
     NumFrames = [] #
     root_dir = os.path.join(root_dir, 'flow_x_processed')
     for dir_user in train_dataset_folder:
+        print('Splittin in ' + dir_user + ' folder')
         class_id = 0
         dir = os.path.join(root_dir, dir_user) #Folder effettiva dove mettere i file
         action_sorted = sorted(os.listdir(dir))
@@ -40,7 +41,8 @@ def gen_split(root_dir,train_dataset_folder, stackSize = 5):
                 #print(inst_dir)
                 Dataset_OpticalFlowY.append(inst_dir.replace('flow_x_processed', 'flow_y_processed'))
         class_id += 1
-    taset_OpticalFlowX, Dataset_OpticalFlowY, Labels, NumFrames
+
+    return Dataset_RGBFrame, Dataset_OpticalFlowX, Dataset_OpticalFlowY, Labels, NumFrames
 
 class makeDataset(Dataset):
     def __init__(self, root_dir,train_dataset_folder, spatial_transform, seqLen=7, train=True):
