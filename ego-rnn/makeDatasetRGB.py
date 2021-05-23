@@ -60,7 +60,7 @@ class makeDataset(Dataset):
         vid_nameX = self.dataset_OpticalFlowX[idx]
         vid_nameY = self.dataset_OpticalFlowY[idx]
         vid_nameF = self.dataset_RGBFrame[idx]
-        print('Currently training on ' + src(idx) + ' folder ' + vid_nameF)
+        print('Currently training on ' + str(idx) + ' folder ' + vid_nameF)
 
         label = self.labels[idx]
         numFrame = self.numFrames[idx]
