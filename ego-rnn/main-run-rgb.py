@@ -210,8 +210,6 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
                     save_path_model = (model_folder + '/model_rgb_state_dict_epoch' + str(epoch+1) + '.pth')
                     torch.save(model.state_dict(), save_path_model)
     
-    save_path_model = (model_folder + '/model_rgb_state_dict_epoch' + str(epoch+1) + '.pth')
-    torch.save(model.state_dict(), save_path_model)
     train_log_loss.close()
     train_log_acc.close()
     val_log_acc.close()
@@ -229,10 +227,10 @@ def __main__():
     seqLen = 7 # number of frames
     trainBatchSize = 32 # bnumber of training samples to work through before the model’s internal parameters are update
     valBatchSize = 32  # da valutare se 32 o 64
-    numEpochs = 4 # 7 frame dovrebbe essere veloce
+    numEpochs = 200 # 7 frame dovrebbe essere veloce
     lr1 = 1e-3 #defauld Learning rate
     decayRate = 0.1 #Learning rate decay rate
-    stepSize = [50,125,200]
+    stepSize = [50,100,150]
     memSize = 512 #ConvLSTM hidden state size
 
 
