@@ -160,6 +160,7 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
             loss = loss_fn(output_label, labelVariable)
             loss.backward()
             optimizer_fn.step()
+            optim_scheduler.step()
             _, predicted = torch.max(output_label.data, 1)
             numCorrTrain += (predicted == targets.to(DEVICE)).sum()
             epoch_loss += loss.item()
@@ -167,7 +168,6 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
 
         avg_loss = epoch_loss/iterPerEpoch
         trainAccuracy = (numCorrTrain.data.item() / trainSamples)
-        optim_scheduler.step()
 
         print('Train: Epoch = {} | Loss = {} | Accuracy = {}'.format(epoch+1, avg_loss, trainAccuracy))
         writer.add_scalar('train/epoch_loss', avg_loss, epoch+1) # log del train
