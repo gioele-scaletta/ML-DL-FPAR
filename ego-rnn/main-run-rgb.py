@@ -248,7 +248,7 @@ def __main__():
             stepSize,
             memSize)
 
-    stage = 1
+    stage = 2
     trainDatasetDir = './GTEA61'
     valDatasetDir = './GTEA61'
     stage1Dict = './results_stage1/rgb/-stage1/model_rgb_state_dict.pth'
