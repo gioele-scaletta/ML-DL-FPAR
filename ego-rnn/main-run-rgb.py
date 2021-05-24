@@ -61,10 +61,10 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
         model.train(False)
         for params in model.parameters():
             params.requires_grad = False
+    #stage 2 : train anche per 
     else:
-
         model = attentionModel(num_classes=num_classes, mem_size=memSize)
-        model.load_state_dict(torch.load(stage1_dict))
+        model.load_state_dict(torch.load(stage1_dict), strict=True)
         model.train(False)
         for params in model.parameters():
             params.requires_grad = False
@@ -122,6 +122,7 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
 
     loss_fn = nn.CrossEntropyLoss()
 
+
     optimizer_fn = torch.optim.Adam(train_params, lr=lr1, weight_decay=4e-5, eps=1e-4)
 
     optim_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer_fn, milestones=decay_step,
@@ -131,8 +132,7 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
     min_accuracy = 0
 
     for epoch in range(numEpochs):
-      #optim_scheduler portato sotto da warning
-
+        
         epoch_loss = 0
         numCorrTrain = 0
         trainSamples = 0
@@ -160,12 +160,11 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
             loss = loss_fn(output_label, labelVariable)
             loss.backward()
             optimizer_fn.step()
-            
             _, predicted = torch.max(output_label.data, 1)
             numCorrTrain += (predicted == targets.to(DEVICE)).sum()
             epoch_loss += loss.item()
+          
         optim_scheduler.step()
-        
         avg_loss = epoch_loss/iterPerEpoch
         trainAccuracy = (numCorrTrain.data.item() / trainSamples)
 
@@ -174,7 +173,7 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
         writer.add_scalar('train/accuracy', trainAccuracy, epoch+1)
 
         if val_data_dir is not None:
-            if (epoch+1) % 1 == 0:
+            if (epoch+1) % 10 == 0:
                 model.train(False)
                 val_loss_epoch = 0
                 val_iter = 0
@@ -223,7 +222,7 @@ def __main__():
     trainDatasetDir = './GTEA61'
     valDatasetDir = './GTEA61'
     stage1Dict = None
-    outDir = 'res' # label for folder name
+    outDir = 'results_stage1' # label for folder name
     seqLen = 7 # number of frames
     trainBatchSize = 32 # bnumber of training samples to work through before the model’s internal parameters are update
     valBatchSize = 32  # da valutare se 32 o 64
@@ -234,8 +233,38 @@ def __main__():
     memSize = 512 #ConvLSTM hidden state size
 
 
-    #Stage 1
-    main_run(1,
+#Stage 1
+    main_run(stage,
+            trainDatasetDir,
+            valDatasetDir,
+            stage1Dict,
+            outDir,
+            seqLen, 
+            trainBatchSize,
+            valBatchSize,
+            numEpochs, 
+            lr1, 
+            decayRate, 
+            stepSize,
+            memSize)
+
+    stage = 1
+    trainDatasetDir = './GTEA61'
+    valDatasetDir = './GTEA61'
+    stage1Dict = './results_stage1/rgb/-stage1/model_rgb_state_dict.pth'
+    outDir = 'results_stage2' # label for folder name
+    seqLen = 7 # number of frames
+    trainBatchSize = 32 # bnumber of training samples to work through before the model’s internal parameters are update
+    valBatchSize = 32  # da valutare se 32 o 64
+    numEpochs = 200 # 7 frame dovrebbe essere veloce
+    lr1 = 1e-4 #defauld Learning rate
+    decayRate = 0.1 #Learning rate decay rate
+    stepSize = [50,100,150]
+    memSize = 512 #ConvLSTM hidden state size
+
+
+#Stage 2
+    main_run(stage,
             trainDatasetDir,
             valDatasetDir,
             stage1Dict,
