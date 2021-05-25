@@ -78,7 +78,6 @@ def main_run( trainDir, valDir, outDir, stackSize, trainBatchSize, valBatchSize,
     train_iter = 0
 
     for epoch in range(numEpochs):
-        optim_scheduler.step()
         epoch_loss = 0
         numCorrTrain = 0
         trainSamples = 0
