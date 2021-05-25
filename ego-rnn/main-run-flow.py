@@ -9,26 +9,21 @@ from makeDatasetFlow import *
 import argparse
 import sys
 
+DEVICE = "cuda"
 
-def main_run(dataset, trainDir, valDir, outDir, stackSize, trainBatchSize, valBatchSize, numEpochs, lr1,
+def main_run( trainDir, valDir, outDir, stackSize, trainBatchSize, valBatchSize, numEpochs, lr1,
              decay_factor, decay_step):
 
 
-    if dataset == 'gtea61':
-        num_classes = 61
-    elif dataset == 'gtea71':
-      num_classes = 71
-    elif dataset == 'gtea_gaze':
-        num_classes = 44
-    elif dataset == 'egtea':
-        num_classes = 106
-    else:
-        print('Dataset not found')
-        sys.exit()
+    ##if dataset == 'gtea61':
+    num_classes = 61
 
+    train_usr = ["S1", "S3", "S4"]
+    val_usr = ["S2"]
+    
     min_accuracy = 0
 
-    model_folder = os.path.join('./', outDir, dataset, 'flow')  # Dir for saving models and log files
+    model_folder = os.path.join('./', outDir, 'gtea61', 'flow')  # Dir for saving models and log files
     # Create the dir
     if os.path.exists(model_folder):
         print('Dir {} exists!'.format(model_folder))
@@ -49,14 +44,14 @@ def main_run(dataset, trainDir, valDir, outDir, stackSize, trainBatchSize, valBa
     spatial_transform = Compose([Scale(256), RandomHorizontalFlip(), MultiScaleCornerCrop([1, 0.875, 0.75, 0.65625], 224),
                                  ToTensor(), normalize])
 
-    vid_seq_train = makeDataset(trainDir, spatial_transform=spatial_transform, sequence=False,
+    vid_seq_train = makeDataset(trainDir, train_usr, spatial_transform=spatial_transform, sequence=False,
                                 stackSize=stackSize, fmt='.jpg')
 
     train_loader = torch.utils.data.DataLoader(vid_seq_train, batch_size=trainBatchSize,
                             shuffle=True, sampler=None, num_workers=4, pin_memory=True)
     if valDir is not None:
 
-        vid_seq_val = makeDataset(valDir, spatial_transform=Compose([Scale(256), CenterCrop(224), ToTensor(), normalize]),
+        vid_seq_val = makeDataset(valDir, val_usr, spatial_transform=Compose([Scale(256), CenterCrop(224), ToTensor(), normalize]),
                                    sequence=False, stackSize=stackSize, fmt='.jpg', phase='Test')
 
         val_loader = torch.utils.data.DataLoader(vid_seq_val, batch_size=valBatchSize,
@@ -71,7 +66,8 @@ def main_run(dataset, trainDir, valDir, outDir, stackSize, trainBatchSize, valBa
     model.train(True)
     train_params = list(model.parameters())
 
-    model.cuda()
+    #model.cuda()
+    model.to(DEVICE)
 
     loss_fn = nn.CrossEntropyLoss()
 
@@ -93,15 +89,15 @@ def main_run(dataset, trainDir, valDir, outDir, stackSize, trainBatchSize, valBa
             train_iter += 1
             iterPerEpoch += 1
             optimizer_fn.zero_grad()
-            inputVariable = Variable(inputs.cuda())
-            labelVariable = Variable(targets.cuda())
+            inputVariable = Variable(inputs.to(DEVICE))
+            labelVariable = Variable(targets.to(DEVICE))
             trainSamples += inputs.size(0)
             output_label, _ = model(inputVariable)
             loss = loss_fn(output_label, labelVariable)
             loss.backward()
             optimizer_fn.step()
             _, predicted = torch.max(output_label.data, 1)
-            numCorrTrain += (predicted == targets.cuda()).sum()
+            numCorrTrain += (predicted == targets.to(DEVICE)).sum()
             epoch_loss += loss.data[0]
         avg_loss = epoch_loss/iterPerEpoch
         trainAccuracy = (numCorrTrain / trainSamples) * 100
@@ -120,13 +116,13 @@ def main_run(dataset, trainDir, valDir, outDir, stackSize, trainBatchSize, valBa
                 for j, (inputs, targets) in enumerate(val_loader):
                     val_iter += 1
                     val_samples += inputs.size(0)
-                    inputVariable = Variable(inputs.cuda(), volatile=True)
-                    labelVariable = Variable(targets.cuda(async=True), volatile=True)
+                    inputVariable = Variable(inputs.to(DEVICE), volatile=True)
+                    labelVariable = Variable(targets.to(DEVICE), volatile=True)
                     output_label, _ = model(inputVariable)
                     val_loss = loss_fn(output_label, labelVariable)
                     val_loss_epoch += val_loss.data[0]
                     _, predicted = torch.max(output_label.data, 1)
-                    numCorr += (predicted == targets.cuda()).sum()
+                    numCorr += (predicted == targets.to(DEVICE)).sum()
                 val_accuracy = (numCorr / val_samples) * 100
                 avg_val_loss = val_loss_epoch / val_iter
                 print('Validation: Epoch = {} | Loss = {} | Accuracy = {}'.format(epoch + 1, avg_val_loss, val_accuracy))
@@ -153,36 +149,37 @@ def main_run(dataset, trainDir, valDir, outDir, stackSize, trainBatchSize, valBa
 
 
 def __main__():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset', type=str, default='gtea61', help='Dataset')
-    parser.add_argument('--trainDatasetDir', type=str, default='./dataset/gtea_warped_flow_61/split2/train',
-                        help='Train set directory')
-    parser.add_argument('--valDatasetDir', type=str, default=None,
-                        help='Validation set directory')
-    parser.add_argument('--outDir', type=str, default='experiments', help='Directory to save results')
-    parser.add_argument('--stackSize', type=int, default=5, help='Length of sequence')
-    parser.add_argument('--trainBatchSize', type=int, default=32, help='Training batch size')
-    parser.add_argument('--valBatchSize', type=int, default=32, help='Validation batch size')
-    parser.add_argument('--numEpochs', type=int, default=750, help='Number of epochs')
-    parser.add_argument('--lr', type=float, default=1e-2, help='Learning rate')
-    parser.add_argument('--stepSize', type=float, default=[150, 300, 500], nargs="+", help='Learning rate decay step')
-    parser.add_argument('--decayRate', type=float, default=0.5, help='Learning rate decay rate')
+    
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument('--dataset', type=str, default='gtea61', help='Dataset')
+    # parser.add_argument('--trainDatasetDir', type=str, default='./dataset/gtea_warped_flow_61/split2/train',
+    #                     help='Train set directory')
+    # parser.add_argument('--valDatasetDir', type=str, default=None,
+    #                     help='Validation set directory')
+    # parser.add_argument('--outDir', type=str, default='experiments', help='Directory to save results')
+    # parser.add_argument('--stackSize', type=int, default=5, help='Length of sequence')
+    # parser.add_argument('--trainBatchSize', type=int, default=32, help='Training batch size')
+    # parser.add_argument('--valBatchSize', type=int, default=32, help='Validation batch size')
+    # parser.add_argument('--numEpochs', type=int, default=750, help='Number of epochs')
+    # parser.add_argument('--lr', type=float, default=1e-2, help='Learning rate')
+    # parser.add_argument('--stepSize', type=float, default=[150, 300, 500], nargs="+", help='Learning rate decay step')
+    # parser.add_argument('--decayRate', type=float, default=0.5, help='Learning rate decay rate')
 
-    args = parser.parse_args()
+    # args = parser.parse_args()
 
-    dataset = args.dataset
-    trainDatasetDir = args.trainDatasetDir
-    valDatasetDir = args.valDatasetDir
-    outDir = args.outDir
-    stackSize = args.stackSize
-    trainBatchSize = args.trainBatchSize
-    valBatchSize = args.valBatchSize
-    numEpochs = args.numEpochs
-    lr1 = args.lr
-    stepSize = args.stepSize
-    decayRate = args.decayRate
+    #dataset ='./GTEA61'
+    trainDatasetDir = '/content/drive/MyDrive/ML_project/ego-rnn/content/GTEA61'
+    valDatasetDir = '/content/drive/MyDrive/ML_project/ego-rnn/content/GTEA61'
+    outDir ='results_flow'
+    stackSize = 5
+    trainBatchSize = 32
+    valBatchSize = 32
+    numEpochs = 750
+    lr1 = 1e-2
+    stepSize = [150, 300, 500]
+    decayRate = 0.5
 
-    main_run(dataset, trainDatasetDir, valDatasetDir, outDir, stackSize, trainBatchSize, valBatchSize, numEpochs, lr1,
+    main_run( trainDatasetDir, valDatasetDir, outDir, stackSize, trainBatchSize, valBatchSize, numEpochs, lr1,
              decayRate, stepSize)
 
 __main__()
