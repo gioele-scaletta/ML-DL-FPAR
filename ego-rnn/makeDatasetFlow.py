@@ -15,7 +15,7 @@ def gen_split(root_dir, S_folders, stackSize):
     NumFrames = []
     root_dir = os.path.join(root_dir, 'flow_x_processed')
     for dir_user in S_folders:
-        print('Splittin in ' + dir_user + ' folder')
+        print('Splitting in ' + dir_user + ' folder')
         class_id = 0
         dir = os.path.join(root_dir, dir_user) #Folder effettiva dove mettere i file
         action_sorted = sorted(os.listdir(dir))

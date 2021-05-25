@@ -48,7 +48,7 @@ def main_run( trainDir, valDir, outDir, stackSize, trainBatchSize, valBatchSize,
                                 stackSize=stackSize, fmt='.jpg')
 
     train_loader = torch.utils.data.DataLoader(vid_seq_train, batch_size=trainBatchSize,
-                            shuffle=True, sampler=None, num_workers=4, pin_memory=True)
+                            shuffle=True, sampler=None, num_workers=2, pin_memory=True)
     if valDir is not None:
 
         vid_seq_val = makeDataset(valDir, val_usr, spatial_transform=Compose([Scale(256), CenterCrop(224), ToTensor(), normalize]),
