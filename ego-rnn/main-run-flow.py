@@ -98,7 +98,9 @@ def main_run( trainDir, valDir, outDir, stackSize, trainBatchSize, valBatchSize,
             optimizer_fn.step()
             _, predicted = torch.max(output_label.data, 1)
             numCorrTrain += (predicted == targets.to(DEVICE)).sum()
-            epoch_loss += loss.data[0]
+            epoch_loss += loss.item()
+
+        optim_scheduler.step()
         avg_loss = epoch_loss/iterPerEpoch
         trainAccuracy = (numCorrTrain / trainSamples) * 100
         print('Train: Epoch = {} | Loss = {} | Accuracy = {}'.format(epoch + 1, avg_loss, trainAccuracy))
@@ -120,7 +122,7 @@ def main_run( trainDir, valDir, outDir, stackSize, trainBatchSize, valBatchSize,
                     labelVariable = Variable(targets.to(DEVICE), volatile=True)
                     output_label, _ = model(inputVariable)
                     val_loss = loss_fn(output_label, labelVariable)
-                    val_loss_epoch += val_loss.data[0]
+                    val_loss_epoch += val_loss.item()
                     _, predicted = torch.max(output_label.data, 1)
                     numCorr += (predicted == targets.to(DEVICE)).sum()
                 val_accuracy = (numCorr / val_samples) * 100
