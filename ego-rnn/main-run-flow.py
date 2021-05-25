@@ -45,14 +45,14 @@ def main_run( trainDir, valDir, outDir, stackSize, trainBatchSize, valBatchSize,
                                  ToTensor(), normalize])
 
     vid_seq_train = makeDataset(trainDir, train_usr, spatial_transform=spatial_transform, sequence=False,
-                                stackSize=stackSize, fmt='.jpg')
+                                stackSize=stackSize, fmt='.png')
 
     train_loader = torch.utils.data.DataLoader(vid_seq_train, batch_size=trainBatchSize,
                             shuffle=True, sampler=None, num_workers=2, pin_memory=True)
     if valDir is not None:
 
         vid_seq_val = makeDataset(valDir, val_usr, spatial_transform=Compose([Scale(256), CenterCrop(224), ToTensor(), normalize]),
-                                   sequence=False, stackSize=stackSize, fmt='.jpg', phase='Test')
+                                   sequence=False, stackSize=stackSize, fmt='.png', phase='Test')
 
         val_loader = torch.utils.data.DataLoader(vid_seq_val, batch_size=valBatchSize,
                                 shuffle=False, num_workers=2, pin_memory=True)
@@ -170,8 +170,8 @@ def __main__():
     # args = parser.parse_args()
 
     #dataset ='./GTEA61'
-    trainDatasetDir = '/content/drive/MyDrive/ML_project/ego-rnn/content/GTEA61'
-    valDatasetDir = '/content/drive/MyDrive/ML_project/ego-rnn/content/GTEA61'
+    trainDatasetDir = '/content/ML-DL-FPAR/ego-rnn/GTEA61'
+    valDatasetDir ='/content/ML-DL-FPAR/ego-rnn/GTEA61'
     outDir ='results_flow'
     stackSize = 5
     trainBatchSize = 32
