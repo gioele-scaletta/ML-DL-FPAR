@@ -117,11 +117,12 @@ def main_run( trainDir, valDir, outDir, stackSize, trainBatchSize, valBatchSize,
                 for j, (inputs, targets) in enumerate(val_loader):
                     val_iter += 1
                     val_samples += inputs.size(0)
-                    inputVariable = Variable(inputs.to(DEVICE), volatile=True)
-                    labelVariable = Variable(targets.to(DEVICE), volatile=True)
-                    output_label, _ = model(inputVariable)
-                    val_loss = loss_fn(output_label, labelVariable)
-                    val_loss_epoch += val_loss.item()
+                    inputVariable = Variable(inputs.to(DEVICE))
+                    labelVariable = Variable(targets.to(DEVICE))
+                    with torch.no_grad():
+                        output_label, _ = model(inputVariable)
+                        val_loss = loss_fn(output_label, labelVariable)
+                        val_loss_epoch += val_loss.item()
                     _, predicted = torch.max(output_label.data, 1)
                     numCorr += (predicted == targets.to(DEVICE)).sum()
                 val_accuracy = (numCorr / val_samples) * 100
