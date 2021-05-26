@@ -15,6 +15,8 @@ import sys
 def main_run(dataset, flowModel, rgbModel, stackSize, seqLen, memSize, trainDatasetDir, valDatasetDir, outDir,
              trainBatchSize, valBatchSize, lr1, numEpochs, decay_step, decay_factor):
 
+    train_usr = ["S1", "S3", "S4"]
+    val_usr = ["S2"]
 
     if dataset == 'gtea61':
         num_classes = 61
@@ -51,13 +53,13 @@ def main_run(dataset, flowModel, rgbModel, stackSize, seqLen, memSize, trainData
     spatial_transform = Compose([Scale(256), RandomHorizontalFlip(), MultiScaleCornerCrop([1, 0.875, 0.75, 0.65625], 224),
                                  ToTensor(), normalize])
 
-    vid_seq_train = makeDataset(trainDatasetDir,spatial_transform=spatial_transform, sequence=False, numSeg=1, stackSize=stackSize, fmt='.png', seqLen=seqLen)
+    vid_seq_train = makeDataset(trainDatasetDir,train_usr,spatial_transform=spatial_transform, sequence=False, numSeg=1, stackSize=stackSize, fmt='.png', seqLen=seqLen)
 
-    train_loader = torch.utils.data.DataLoader(vid_seq_train, batch_size=trainBatchSize, shuffle=True, num_workers=4, pin_memory=True)
+    train_loader = torch.utils.data.DataLoader(vid_seq_train, batch_size=trainBatchSize, shuffle=True, num_workers=2, pin_memory=True)
 
     if valDatasetDir is not None:
 
-        vid_seq_val = makeDataset(valDatasetDir,
+        vid_seq_val = makeDataset(valDatasetDir,val_usr,
                                    spatial_transform=Compose([Scale(256), CenterCrop(224), ToTensor(), normalize]),
                                    sequence=False, numSeg=1, stackSize=stackSize, fmt='.png', phase='Test',
                                    seqLen=seqLen)
@@ -221,3 +223,4 @@ def __main__():
              trainBatchSize, valBatchSize, lr1, numEpochs, decay_step, decay_factor)
 
 __main__()
+
