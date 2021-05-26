@@ -8,7 +8,7 @@ from MyConvLSTMCell import *
 
 class no_attentionModel(nn.Module):
     def __init__(self, num_classes=61, mem_size=512):
-        super(attentionModel, self).__init__()
+        super(no_attentionModel, self).__init__()
         self.num_classes = num_classes
         self.resNet = resnetMod.resnet34(True, True)
         self.mem_size = mem_size
