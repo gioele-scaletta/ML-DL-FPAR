@@ -14,12 +14,11 @@ root_dir = os.path.join('/content/drive/MyDrive/ML_project/ego-rnn/content/GTEA6
 
 
 def gen_split(root_dir,train_dataset_folder, stackSize = 5):
-    Dataset_OpticalFlowX = [] #Path to RGB frame
-    Dataset_OpticalFlowY = []
     Dataset_RGBFrame = []
+    Dataset_MMAPSFrame = []
     Labels = [] #Labels
     NumFrames = [] #
-    root_dir = os.path.join(root_dir, 'flow_x_processed')
+    root_dir = os.path.join(root_dir, 'processed_frames2')
     for dir_user in train_dataset_folder:
         print('Splittin in ' + dir_user + ' folder')
         class_id = 0
@@ -36,11 +35,10 @@ def gen_split(root_dir,train_dataset_folder, stackSize = 5):
                 NumFrames.append(numFrames) # numero di frame x ogni folder
                 Dataset_OpticalFlowX.append(inst_dir)
                 Labels.append(class_id) # numero della classe del azione
-                Dataset_RGBFrame.append(os.path.join(inst_dir.replace('flow_x_processed', 'processed_frames2'), "rgb"))
-                #print(inst_dir)
-                Dataset_OpticalFlowY.append(inst_dir.replace('flow_x_processed', 'flow_y_processed'))
+                Dataset_RGBFrame.append(os.path.join(inst_dir, "rgb"))
+                Dataset_MMAPSFrame.append(os.path.join(inst_dir.replace('rgb', 'mmaps')))
             class_id += 1
-    return Dataset_RGBFrame, Dataset_OpticalFlowX, Dataset_OpticalFlowY, Labels, NumFrames
+    return Dataset_RGBFrame, Dataset_MMAPSFrame, Labels, NumFrames
 
 class makeDataset(Dataset):
     def __init__(self, root_dir,train_dataset_folder, spatial_transform, seqLen=7, train=True):
@@ -55,20 +53,25 @@ class makeDataset(Dataset):
         return len(self.dataset_OpticalFlowX)
 
     def __getitem__(self, idx): #dataset[idx]
-        vid_nameX = self.dataset_OpticalFlowX[idx]
-        vid_nameY = self.dataset_OpticalFlowY[idx]
         vid_nameF = self.dataset_RGBFrame[idx]
-        #print('Currently training on ' + str(idx) + ' folder ' + vid_nameF)
-
+        vid_nameM = self.dataset_MMAPSFrame[idx]
+        
         label = self.labels[idx]
         numFrame = self.numFrames[idx]
 
         inpSeq = []
-
+        inpSeqM = []
+        
         self.spatial_transform.randomize_parameters()
         for i in np.linspace(1, numFrame, self.seqLen, endpoint=False): 
             fl_name = vid_nameF + '/' + 'rgb' + str(int(np.floor(i))).zfill(4) + self.fmt
             img = Image.open(fl_name)
             inpSeq.append(self.spatial_transform(img.convert('RGB')))
+            
+            fm_name = vid_nameM + '/' + 'map' + str(int(np.floor(i))).zfill(4) + self.fmt
+            img = Image.open(fm_name)
+            inpSeqM.append(self.spatial_transform(img))
+        
         inpSeq = torch.stack(inpSeq, 0)
-        return inpSeq, label
+        inpSeqM = torch.stack(inpSeqM, 0)
+        return inpSeq, inpSeqM, label
