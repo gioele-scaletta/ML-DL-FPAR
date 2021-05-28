@@ -15,6 +15,8 @@ import sys
 def main_run(dataset, flowModel, rgbModel, stackSize, seqLen, memSize, trainDatasetDir, valDatasetDir, outDir,
              trainBatchSize, valBatchSize, lr1, numEpochs, decay_step, decay_factor):
 
+    train_usr = ["S1", "S3", "S4"]
+    val_usr = ["S2"]
 
     if dataset == 'gtea61':
         num_classes = 61
@@ -51,17 +53,15 @@ def main_run(dataset, flowModel, rgbModel, stackSize, seqLen, memSize, trainData
     spatial_transform = Compose([Scale(256), RandomHorizontalFlip(), MultiScaleCornerCrop([1, 0.875, 0.75, 0.65625], 224),
                                  ToTensor(), normalize])
 
-    vid_seq_train = makeDataset(trainDatasetDir,spatial_transform=spatial_transform,
-                               sequence=False, numSeg=1, stackSize=stackSize, fmt='.jpg', seqLen=seqLen)
+    vid_seq_train = makeDataset(trainDatasetDir,train_usr,spatial_transform=spatial_transform, sequence=False, numSeg=1, stackSize=stackSize, fmt='.png', seqLen=seqLen)
 
-    train_loader = torch.utils.data.DataLoader(vid_seq_train, batch_size=trainBatchSize,
-                            shuffle=True, num_workers=4, pin_memory=True)
+    train_loader = torch.utils.data.DataLoader(vid_seq_train, batch_size=trainBatchSize, shuffle=True, num_workers=2, pin_memory=True)
 
     if valDatasetDir is not None:
 
-        vid_seq_val = makeDataset(valDatasetDir,
+        vid_seq_val = makeDataset(valDatasetDir,val_usr,
                                    spatial_transform=Compose([Scale(256), CenterCrop(224), ToTensor(), normalize]),
-                                   sequence=False, numSeg=1, stackSize=stackSize, fmt='.jpg', phase='Test',
+                                   sequence=False, numSeg=1, stackSize=stackSize, fmt='.png', phase='Test',
                                    seqLen=seqLen)
 
         val_loader = torch.utils.data.DataLoader(vid_seq_val, batch_size=valBatchSize,
@@ -133,7 +133,7 @@ def main_run(dataset, flowModel, rgbModel, stackSize, seqLen, memSize, trainData
     train_iter = 0
 
     for epoch in range(numEpochs):
-        optim_scheduler.step()
+        
         epoch_loss = 0
         numCorrTrain = 0
         iterPerEpoch = 0
@@ -152,7 +152,8 @@ def main_run(dataset, flowModel, rgbModel, stackSize, seqLen, memSize, trainData
             optimizer_fn.step()
             _, predicted = torch.max(output_label.data, 1)
             numCorrTrain += (predicted == targets.cuda()).sum()
-            epoch_loss += loss.data[0]
+            epoch_loss += loss.item()
+        optim_scheduler.step()
         avg_loss = epoch_loss / iterPerEpoch
         trainAccuracy = (numCorrTrain / trainSamples) * 100
         print('Average training loss after {} epoch = {} '.format(epoch + 1, avg_loss))
@@ -174,7 +175,7 @@ def main_run(dataset, flowModel, rgbModel, stackSize, seqLen, memSize, trainData
                     labelVariable = Variable(targets.cuda())
                     output_label = model(inputVariableFlow, inputVariableFrame)
                     loss = loss_fn(F.log_softmax(output_label, dim=1), labelVariable)
-                    val_loss_epoch += loss.data[0]
+                    val_loss_epoch += loss.item()
                     _, predicted = torch.max(output_label.data, 1)
                     numCorr += (predicted == labelVariable.data).sum()
                 val_accuracy = (numCorr / valSamples) * 100
@@ -204,46 +205,22 @@ def main_run(dataset, flowModel, rgbModel, stackSize, seqLen, memSize, trainData
 
 
 def __main__():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset', type=str, default='gtea61', help='Dataset')
-    parser.add_argument('--flowModel', type=str, default='./experiments/gtea61/flow/best_model_state_dict.pth',
-                        help='Flow model')
-    parser.add_argument('--rgbModel', type=str, default='./experiments/gtea61/rgb/best_model_state_dict.pth',
-                        help='RGB model')
-    parser.add_argument('--trainDatasetDir', type=str, default='./dataset/gtea_warped_flow_61/split2/train',
-                        help='Train set directory')
-    parser.add_argument('--valDatasetDir', type=str, default=None,
-                        help='Validation set directory')
-    parser.add_argument('--outDir', type=str, default='experiments', help='Directory to save results')
-    parser.add_argument('--seqLen', type=int, default=25, help='Length of sequence')
-    parser.add_argument('--stackSize', type=int, default=5, help='Number of opticl flow images in input')
-    parser.add_argument('--trainBatchSize', type=int, default=32, help='Training batch size')
-    parser.add_argument('--valBatchSize', type=int, default=32, help='Validation batch size')
-    parser.add_argument('--numEpochs', type=int, default=250, help='Number of epochs')
-    parser.add_argument('--lr', type=float, default=1e-2, help='Learning rate')
-    parser.add_argument('--stepSize', type=float, default=1, help='Learning rate decay step')
-    parser.add_argument('--decayRate', type=float, default=0.99, help='Learning rate decay rate')
-    parser.add_argument('--memSize', type=int, default=512, help='ConvLSTM hidden state size')
-
-    args = parser.parse_args()
-
-    dataset = args.dataset
-    flowModel = args.flowModel
-    rgbModel = args.rgbModel
-    trainDatasetDir = args.trainDatasetDir
-    valDatasetDir = args.valDatasetDir
-    outDir = args.outDir
-    stackSize = args.stackSize
-    seqLen = args.seqLen
-    trainBatchSize = args.trainBatchSize
-    valBatchSize = args.valBatchSize
-    numEpochs = args.numEpochs
-    lr1 = args.lr
-    decay_step = args.stepSize
-    decay_factor = args.decayRate
-    memSize = args.memSize
-
-    main_run(dataset, flowModel, rgbModel, stackSize, seqLen, memSize, trainDatasetDir, valDatasetDir, outDir,
+    flowModel = "model_flow_state_dict.pth"
+    rgbModel = "model_rgb_state_dict_16_attention_2stage.pth"
+    trainDatasetDir = "./GTEA61"
+    valDatasetDir = "./GTEA61"
+    outDir = "results"   
+    stackSize = 5        
+    seqLen = 16         
+    trainBatchSize = 32
+    valBatchSize = 32
+    numEpochs = 250
+    lr1 = 1e-2
+    decay_step = 1
+    decay_factor = 0.99
+    memSize=512
+    main_run('gtea61', flowModel, rgbModel, stackSize, seqLen, memSize, trainDatasetDir, valDatasetDir, outDir,
              trainBatchSize, valBatchSize, lr1, numEpochs, decay_step, decay_factor)
 
 __main__()
+
