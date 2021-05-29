@@ -183,7 +183,7 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
                 predicted_mmaps = nn.functional.softmax(predicted_mmaps,dim=1)
                 loss_mmaps_tot = 0
                 for i in range(mmaps_resized.size()[0]):
-                    loss_mmaps_tot += loss_mmaps(predicted_mmaps[0], mmaps_resized[0])
+                    loss_mmaps_tot += loss_mmaps(predicted_mmaps[i], mmaps_resized[i])
                 tot_loss += loss_mmaps_tot.item()                
             
             tot_loss.backward()
