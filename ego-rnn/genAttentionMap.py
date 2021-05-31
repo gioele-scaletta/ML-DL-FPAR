@@ -18,14 +18,14 @@ num_classes = 61 # Classes in the pre-trained model
 mem_size = 512
 model = attentionModel(num_classes, mem_size)
 
-model_state_dict = 'model_ss_task1.pth' # Weights of the pre-trained model
+model_state_dict = '/content/drive/MyDrive/ML_project/Risultati_e_modelli/SS_Task/model_ss_task1.pth' # Weights of the pre-trained model
 model.load_state_dict(torch.load(model_state_dict),strict=False)
 model_backbone = model.resNet
 attentionMapModel = attentionMap(model_backbone).to("cuda")
 attentionMapModel.train(False)
 
 for params in attentionMapModel.parameters():
-  params.requires_grad = False
+    params.requires_grad = False
 
 def applyAttentionToRGB(rgb_folder, output_folder):
   normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225])
@@ -55,10 +55,13 @@ def applyAttentionToRGB(rgb_folder, output_folder):
   return n_rgb_frames,img_array_res_np
 
 class makeAttentionImage():
-  def __init__(self, rgb_folder, output_folder):
-    self.folder_input=rgb_folder
-    self.output_folder=output_folder
-    self.nOfFrames,self.imageWithAttentionNP = applyAttentionToRGB(rgb_folder,output_folder)
+    def __init__(self, rgb_folder, output_folder):
+        self.folder_input=rgb_folder
+        self.output_folder=output_folder
+        self.nOfFrames,self.imageWithAttentionNP = applyAttentionToRGB(rgb_folder,output_folder)
 
-video1 = makeAttentionImage('./testImage/test/','./testImage/res/')
-imageio.mimsave('./testImage/res/file.gif',video1.imageWithAttentionNP,fps=8)
+
+inputPath = '/content/video/'
+outputPath = inputPath + 'res/'
+video1 = makeAttentionImage(inputPath,outputPath)
+imageio.mimsave(outputPath+'file.gif',video1.imageWithAttentionNP,fps=8)
