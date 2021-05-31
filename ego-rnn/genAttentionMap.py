@@ -1,9 +1,18 @@
-import numpy as np
-from torchvision import transforms
 import cv2
-from objectAttentionModelConvLSTM import *
-from attentionMapModel import attentionMap
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import sys
+from torchvision import transforms
 from PIL import Image
+import resnetMod
+from MyConvLSTMCell import *
+import glob
+import os
+import imageio
+from objectAttentionModelConvLSTM import *
+from attentionMapModel import 
 
 ####################Model definition###############################
 num_classes = 61 # Classes in the pre-trained model
@@ -44,3 +53,5 @@ img_variable = Variable(img_tensor.unsqueeze(0).cuda())
 img = np.asarray(img_pil1)
 attentionMap_image = attentionMapModel(img_variable, img, size_upsample)
 cv2.imwrite(fl_name_out, attentionMap_image)
+
+
