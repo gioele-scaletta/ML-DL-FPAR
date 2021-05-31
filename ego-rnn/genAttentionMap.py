@@ -61,7 +61,7 @@ class makeAttentionImage():
         self.nOfFrames,self.imageWithAttentionNP = applyAttentionToRGB(rgb_folder,output_folder)
 
 
-inputPath = '/content/video/'
+inputPath = '/content/video/' #Folder that cointains the RGB Frames 
 outputPath = inputPath + 'res/'
 video1 = makeAttentionImage(inputPath,outputPath)
 imageio.mimsave(outputPath+'file.gif',video1.imageWithAttentionNP,fps=8)
