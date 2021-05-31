@@ -170,8 +170,8 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
             if stage == 2:
                 mmaps_resized = []
                 for i in range(mmapsVariable.size()[0]):
-                    mmapsVariable[i][mmapsVariable[i] >= 0] = 1
-                    mmapsVariable[i][mmapsVariable[i] < 0] = 0
+                    mmapsVariable[i][mmapsVariable[i] > 0] = 1
+                    mmapsVariable[i][mmapsVariable[i] <= 0] = 0
                     mmaps_resized.append(ff.functional.interpolate(mmapsVariable[i], size=(7,7)))
                 
                 mmaps_resized = torch.stack(mmaps_resized,0)
