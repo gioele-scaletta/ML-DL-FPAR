@@ -12,7 +12,7 @@ import glob
 import os
 import imageio
 from objectAttentionModelConvLSTM import *
-from attentionMapModel import 
+from attentionMapModel import *
 
 num_classes = 61 # Classes in the pre-trained model
 mem_size = 512
@@ -25,7 +25,7 @@ attentionMapModel = attentionMap(model_backbone).to("cuda")
 attentionMapModel.train(False)
 
 for params in attentionMapModel.parameters():
-    params.requires_grad = False
+  params.requires_grad = False
 
 def applyAttentionToRGB(rgb_folder, output_folder):
   normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225])
@@ -55,10 +55,10 @@ def applyAttentionToRGB(rgb_folder, output_folder):
   return n_rgb_frames,img_array_res_np
 
 class makeAttentionImage():
-    def __init__(self, rgb_folder, output_folder):
-        self.folder_input=rgb_folder
-        self.output_folder=output_folder
-        self.nOfFrames,self.imageWithAttentionNP = applyAttentionToRGB(rgb_folder,output_folder)
+  def __init__(self, rgb_folder, output_folder):
+    self.folder_input=rgb_folder
+    self.output_folder=output_folder
+    self.nOfFrames,self.imageWithAttentionNP = applyAttentionToRGB(rgb_folder,output_folder)
 
 video1 = makeAttentionImage('./testImage/test/','./testImage/res/')
 imageio.mimsave('./testImage/res/file.gif',video1.imageWithAttentionNP,fps=8)
