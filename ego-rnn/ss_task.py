@@ -1,7 +1,7 @@
 import torch.nn as nn
 import math
 import torch
-from torch.nn.functional import sigmoid
+from torch.nn.functional import relu
 
 def conv1x1(in_planes, out_planes, kernel_size=1, stride=1, padding=0):
     return nn.Conv2d(in_channels=in_planes, out_channels=out_planes, kernel_size=kernel_size, stride=stride, padding=padding, bias=False)
@@ -21,7 +21,7 @@ class ss_task(nn.Module):
         #cross_entropy(feat, maps)
         
     def forward(self, x):
-        out = torch.sigmoid(x)
+        out = torch.relu(x)
         out = self.conv(out)
         out = torch.flatten(out,1)
         out = self.fc(out)
