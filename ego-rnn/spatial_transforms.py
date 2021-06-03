@@ -113,7 +113,7 @@ class Normalize(object):
         """
         # TODO: make efficient
         if flow is True:
-            continue
+            return tensor
         else:
             mean = self.mean
             std = self.std
