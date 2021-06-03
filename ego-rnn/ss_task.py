@@ -10,7 +10,7 @@ class ss_task(nn.Module):
     def __init__(self):
         super(ss_task, self).__init__()
         self.conv = conv1x1(in_planes=512, out_planes=100, kernel_size=1, stride=1, padding=0)
-        self.fc = nn.Linear(100*7*7,  5*7*7)
+        self.fc = nn.Linear(100*7*7,  2*7*7)
         
         #suggested by professor
         #feat (BS,512x7x7) --> relu() = feat (BS,512x7x7)
