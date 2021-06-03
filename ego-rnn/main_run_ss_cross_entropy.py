@@ -171,6 +171,7 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
                 mmaps_resized = []
                 for i in range(mmapsVariable.size()[0]):
                     mmaps_resized.append(ff.functional.interpolate(mmapsVariable[i], size=(7,7)))
+                    mmapsVariable[i][mmapsVariable[i] > 1e-3] = 1
                 
                 mmaps_resized = torch.stack(mmaps_resized,0)
                 mmaps_resized = mmaps_resized.squeeze(2)
