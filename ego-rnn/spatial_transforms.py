@@ -113,19 +113,7 @@ class Normalize(object):
         """
         # TODO: make efficient
         if flow is True:
-            mean = [np.mean(self.mean)]
-            std = [np.mean(self.std)]
-            for i in range(tensor.size()[0]):
-                    tensor[i][tensor[i] >= mean[i]+2*std[i]] = mean[i]+2*std[i]
-                    tensor[i][tensor[i] < mean[i]+2*std[i]] = mean[i]+std[i]
-                    tensor[i][tensor[i] < mean[i]+std[i]] = mean[i]
-                    tensor[i][tensor[i] < mean[i]-std[i]] = mean[i]-std[i]
-                    tensor[i][tensor[i] < mean[i]-2*std[i]] = mean[i]-2*std[i]
-                    tensor[i][tensor[i] == mean[i]+2*std[i]] = 2
-                    tensor[i][tensor[i] == mean[i]+std[i]] = 1
-                    tensor[i][tensor[i] == mean[i]] = 0
-                    tensor[i][tensor[i] == mean[i]-std[i]] = -1
-                    tensor[i][tensor[i] == mean[i]-2*std[i]] = -2
+            continue
         else:
             mean = self.mean
             std = self.std
