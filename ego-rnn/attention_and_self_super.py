@@ -41,9 +41,9 @@ class attentionModel(nn.Module):
             state = self.lstm_cell(attentionFeat, state)
             
             if stage == 2:
-                ss_task_feats = self.ss_task(feature_conv)
-                ss_task_feats = ss_task_feats.view(feature_conv.size(0), 7*7, 2)
-                ss_task_feats = nn.functional.softmax(ss_task_feats,2)
+                ss_task_feats = self.ss_task(feature_conv) # a tensor of size [32,2*7*7] is returned
+                ss_task_feats = ss_task_feats.view(feature_conv.size(0), 7*7, 2) #make sure that the 2 is at the end, for each pixel of each batch we want two "channels", one for black and one for white
+                ss_task_feats = nn.functional.softmax(ss_task_feats,2) #softmax on dim 2 because for each pixel we want the two probabilities of the two "channels", not among the 49 pixels
                 feats_ss.append(ss_task_feats)
         
         if stage == 2:
