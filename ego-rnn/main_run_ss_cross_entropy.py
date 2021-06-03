@@ -180,22 +180,13 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
 
 
             if stage == 2:
-                mmaps_resized = []
-                for i in range(mmapsVariable.size()[0]):
-                    mmaps_resized.append(ff.functional.interpolate(mmapsVariable[i], size=(7,7)))
-                    mmapsVariable[i][mmapsVariable[i] > 1e-3] = 1
-                
-                mmaps_resized = torch.stack(mmaps_resized,0)
-                mmaps_resized = mmaps_resized.squeeze(2)
-                nf, bz, h, w = mmaps_resized.size()
-                mmaps_resized = mmaps_resized.view(nf*bz, h*w)
-                ##mmaps_resized = mmaps_resized.permute(1,0,2)
-                predicted_mmaps = nn.functional.softmax(predicted_mmaps,dim=2)
-                predicted_mmaps = predicted_mmaps.permute(0,2,1)
+                nf, bz, c, h, w = mmapsVariable.size()
+                mmaps_target = mmapsVariable.contiguous().view(nf*bz*c*h*w)
+                mmaps_predicted = predicted_mmaps.view(-1,2)
+                print("inizio", mmaps_predicted[0][0])
+                print(mmaps_predicted[0][1])
                 loss_mmaps_tot = 0
-
-                ##for i in range(mmaps_resized.size()[0]):
-                loss_mmaps_tot += loss_mmaps(predicted_mmaps, mmaps_resized.type(torch.LongTensor).to(DEVICE))
+                loss_mmaps_tot += loss_mmaps(mmaps_predicted, mmaps_target.type(torch.LongTensor).to(DEVICE))
                 tot_loss += loss_mmaps_tot                
             
             tot_loss.backward()
@@ -266,7 +257,7 @@ def __main__():
     seqLen = 16 # number of frames
     trainBatchSize = 32 # bnumber of training samples to work through before the model’s internal parameters are update
     valBatchSize = 32  # da valutare se 32 o 64
-    numEpochs = 200 # 7 frame dovrebbe essere veloce
+    numEpochs = 1 # 7 frame dovrebbe essere veloce
     lr1 = 1e-3 #defauld Learning rate
     decayRate = 0.1 #Learning rate decay rate
     stepSize = [25,100,150]
@@ -274,24 +265,12 @@ def __main__():
 
 
 #Stage 1
-    main_run(stage,
-          trainDatasetDir,
-          valDatasetDir,
-          stage1Dict,
-          outDir,
-          seqLen, 
-          trainBatchSize,
-          valBatchSize,
-          numEpochs, 
-          lr1, 
-          decayRate, 
-          stepSize,
-          memSize)
+
 
     stage = 2
     trainDatasetDir = './GTEA61'
     valDatasetDir = './GTEA61'
-    stage1Dict = './results_stage1/rgb/-stage1/model_rgb_state_dict.pth'
+    stage1Dict = 'model_first_stage_classification_ss_16.pth'
     outDir = 'results_stage2' # label for folder name
     seqLen = 16 # number of frames
     trainBatchSize = 32 # bnumber of training samples to work through before the model’s internal parameters are update
@@ -319,8 +298,3 @@ def __main__():
             memSize)
 
 __main__()
-
-
-
-
-
