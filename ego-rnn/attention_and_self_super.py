@@ -47,9 +47,8 @@ class attentionModel(nn.Module):
         if stage == 2:
             feats_ss = torch.stack(feats_ss,0)
             feats_ss = feats_ss.permute(1,0,2)        
-            feats_ss = feats_ss.view(bz, inputVariable.size(0), 2, 7*7)    #not sure dimensions of this, depends on mmaps
+            feats_ss = torch.reshape(feats_ss, (bz*inputVariable.size(0), 7*7, 2))   #not sure dimensions of this, depends on mmaps
 
         feats1 = self.avgpool(state[1]).view(state[1].size(0), -1)
         feats = self.classifier(feats1)
         return feats, feats1, feats_ss
-
