@@ -113,6 +113,8 @@ class Normalize(object):
         """
         # TODO: make efficient
         if flow is True:
+            tensor = ff.functional.interpolate(tensor.unsqueeze(0), size=(7,7)).squeeze(0) #in input the image is [1,224,224] so unsqueeze because interpolate wants [1,1,224,224]
+            tensor[tensor != 0] = 1 #binary, numbers of luminescence go from 0 to 1, to not risk small numbers instead of threshold put inequality, alternative do also a less than below 
             return tensor
         else:
             mean = self.mean
