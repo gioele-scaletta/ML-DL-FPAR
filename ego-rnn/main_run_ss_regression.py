@@ -134,9 +134,11 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
     model.cuda()
 
     loss_fn = nn.CrossEntropyLoss()
-    loss_mmaps = nn.CrossEntropyLoss()
-
-
+    loss_mmaps = nn.MSELoss()
+    #loss_mmaps = nn.SmoothL1Loss() #huber loss
+    #loss_mmaps = nn.L1Loss()
+    #loss_mmaps = nn.KLDivLoss()
+    
     optimizer_fn = torch.optim.Adam(train_params, lr=lr1, weight_decay=4e-5, eps=1e-4)
 
     optim_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer_fn, milestones=decay_step,
@@ -183,11 +185,9 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
                 nf, bz, c, h, w = mmapsVariable.size()
                 mmaps_target = mmapsVariable.contiguous().view(nf*bz*c*h*w) #contiguous because otherwise returns error, when data is not contiguous it doesnt manage to make view, 
                                                                             #size of view so that it creates one big vector, no difference as long as also the target is the same size
-                mmaps_predicted = predicted_mmaps.view(-1,2) #create also here one big vector of size nf*bz*c*h*w (note c=1 because black or white)
-                #print("inizio", mmaps_predicted[0][0])
-                #print(mmaps_predicted[0][1]) #check for complementarity
+                mmaps_predicted = predicted_mmaps.view(nf*bz*c*h*w) #create also here one big vector of size nf*bz*c*h*w (note c=1 because black or white)
                 loss_mmaps_tot = 0
-                loss_mmaps_tot += loss_mmaps(mmaps_predicted, mmaps_target.type(torch.LongTensor).to(DEVICE)) #long tensor because it's what crossEntropyLoss requires
+                loss_mmaps_tot += loss_mmaps(mmaps_predicted, mmaps_target.to(DEVICE)) #long tensor because it's what crossEntropyLoss requires
                 tot_loss += loss_mmaps_tot                
             
             tot_loss.backward()
