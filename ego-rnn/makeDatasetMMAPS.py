@@ -5,8 +5,7 @@ from PIL import Image
 import numpy as np
 import glob
 import random
-# prima di tutto crea la classe con makeDataset, si fa dare la directory con i training frames
-#prova
+
 root_dir = os.path.join('/content/drive/MyDrive/ML_project/ego-rnn/content/GTEA61', '')
 def gen_split(root_dir,train_dataset_folder, stackSize = 5):
     Dataset_RGBFrame = []
