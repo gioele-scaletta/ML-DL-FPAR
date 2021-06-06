@@ -1,6 +1,6 @@
 from __future__ import print_function, division
 from attention_and_self_super import *
-from spatial_transforms import (Compose, ToTensor, CenterCrop, Scale, Normalize, MultiScaleCornerCrop,
+from spatial_transforms_regr import (Compose, ToTensor, CenterCrop, Scale, Normalize, MultiScaleCornerCrop,
                                 RandomHorizontalFlip)
 from tensorboardX import SummaryWriter
 from makeDatasetMMAPS import *
