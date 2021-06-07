@@ -255,25 +255,38 @@ def __main__():
     valDatasetDir = './GTEA61'
     stage1Dict = None
     outDir = 'results_stage1' # label for folder name
-    seqLen = 16 # number of frames
+    seqLen = 7 # number of frames
     trainBatchSize = 32 # bnumber of training samples to work through before the model’s internal parameters are update
     valBatchSize = 32  # da valutare se 32 o 64
-    numEpochs = 1 # 7 frame dovrebbe essere veloce
+    numEpochs = 250 # 7 frame dovrebbe essere veloce
     lr1 = 1e-3 #defauld Learning rate
     decayRate = 0.1 #Learning rate decay rate
-    stepSize = [25,100,150]
+    stepSize = [25,75,150]
     memSize = 512 #ConvLSTM hidden state size
 
 
 #Stage 1
+    main_run(stage,
+            trainDatasetDir,
+            valDatasetDir,
+            stage1Dict,
+            outDir,
+            seqLen, 
+            trainBatchSize,
+            valBatchSize,
+            numEpochs, 
+            lr1, 
+            decayRate, 
+            stepSize,
+            memSize)
 
 
     stage = 2
     trainDatasetDir = './GTEA61'
     valDatasetDir = './GTEA61'
-    stage1Dict = 'model_first_stage_classification_ss_16.pth'
+    stage1Dict = './results_stage1/rgb/-stage1/model_rgb_state_dict.pth'
     outDir = 'results_stage2' # label for folder name
-    seqLen = 16 # number of frames
+    seqLen = 7 # number of frames
     trainBatchSize = 32 # bnumber of training samples to work through before the model’s internal parameters are update
     valBatchSize = 32  # da valutare se 32 o 64
     numEpochs = 150 # 7 frame dovrebbe essere veloce
