@@ -21,22 +21,14 @@ class selfAttentionModel(nn.Module):
         self.classifier = nn.Sequential(self.dropout, self.fc)
 
     def forward(self, inputVariable):
+        predictions = []
         for t in range(inputVariable.size(0)):
             logit, feature_conv, feature_convNBN = self.resNet(inputVariable[t])
             n_frames, n_channels, h, w = feature_conv.size()	# n_channels = 512 and h x w = 7x7
             embedding = torch.squeeze(torch.squeeze(self.avgpool(feature_conv),3),2)
-	    			logit = transformer(embedding)			
-            #faccio la softmax e scelgo la classe vincente
-            
-            
-            feature_conv1 = feature_conv.view(bz, nc, h*w)
+	          logit = transformer(embedding)
+	          logit = F.softmax(logit)
             probs, idxs = logit.sort(1, True)
-            class_idx = idxs[:, 0]
-            cam = torch.bmm(self.weight_softmax[class_idx].unsqueeze(1), feature_conv1)
-            attentionMAP = F.softmax(cam.squeeze(1), dim=1)
-            attentionMAP = attentionMAP.view(attentionMAP.size(0), 1, 7, 7)
-            attentionFeat = feature_convNBN * attentionMAP.expand_as(feature_conv)
-            state = self.lstm_cell(attentionFeat, state)
-        feats1 = self.avgpool(state[1]).view(state[1].size(0), -1)
-        feats = self.classifier(feats1)
-        return feats, feats1
+	          class_idx = idxs[:, 0]
+            predictions.append(class_idx)
+        return predictions
