@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 from torch.autograd import Variable
-from transformer import *
+from MyTransformer import *
 
 
 class selfAttentionModel(nn.Module):
@@ -25,9 +25,8 @@ class selfAttentionModel(nn.Module):
             logit, feature_conv, feature_convNBN = self.resNet(inputVariable[t])
             n_frames, n_channels, h, w = feature_conv.size()	# n_channels = 512 and h x w = 7x7
             embedding = torch.squeeze(torch.squeeze(self.avgpool(feature_conv),3),2)
-			
-			
-            
+	    			logit = transformer(embedding)			
+            #faccio la softmax e scelgo la classe vincente
             
             
             feature_conv1 = feature_conv.view(bz, nc, h*w)
