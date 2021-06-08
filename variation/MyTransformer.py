@@ -4,7 +4,6 @@ from torch.nn import functional as F
 from torch.autograd import Variable
 
 #manca positional embedding
-#dubbio riguardo la MLP_head
 
 def transformer(frame):
     multi_head_output = temporal_attention(frame)
@@ -19,9 +18,9 @@ def temporal_attention(frame):
     heads = 8
     outputs = []
     for i in range(heads):
-        W_q = torch.nn.init.xavier_normal_(Variable(torch.randn(d, d_k).type(dtype), requires_grad=True))
-        W_k = torch.nn.init.xavier_normal_(Variable(torch.randn(d, d_k).type(dtype), requires_grad=True))
-        W_v = torch.nn.init.xavier_normal_(Variable(torch.randn(d, d_v).type(dtype), requires_grad=True))
+        W_q = torch.nn.init.xavier_normal_(Variable(torch.randn(d_model, d_k).type(dtype=torch.float32), requires_grad=True))
+        W_k = torch.nn.init.xavier_normal_(Variable(torch.randn(d_model, d_k).type(dtype=torch.float32), requires_grad=True))
+        W_v = torch.nn.init.xavier_normal_(Variable(torch.randn(d_model, d_v).type(dtype=torch.float32), requires_grad=True))
         
         Query = torch.matmul(query,W_q)
         Key = torch.matmul(key,W_k)
@@ -31,7 +30,7 @@ def temporal_attention(frame):
         outputs.append(head_output)
     heads_concat_output = torch.concat(outputs,axis=1)
     
-    W_o = torch.nn.init.xavier_normal_(Variable(torch.randn(heads*d_v, d).type(dtype), requires_grad=True))
+    W_o = torch.nn.init.xavier_normal_(Variable(torch.randn(heads*d_v, d_model).type(dtype=torch.float32), requires_grad=True))
     multi_head_output = torch.matmul(heads_concat_output,W_o)
     multi_head_output = torch.unsqueeze(multi_head_output,2)
     return multi_head_output
