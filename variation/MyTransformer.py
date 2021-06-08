@@ -49,10 +49,11 @@ def self_attention(Query,Key,Value):
 def MLP_head(multi_head_output):
     d_ff = 2048
     d_model = 512
+    n_classes = 61
     out = nn.Sequential(
       nn.Linear(d_model, d_ff),
       nn.gelu(),
       nn.Dropout(0.1),
-      nn.Linear(d_ff, d_model)
+      nn.Linear(d_ff, n_classes)
     )
     return out
