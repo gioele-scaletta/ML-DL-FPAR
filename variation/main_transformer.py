@@ -158,7 +158,7 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
                 for j, (inputs, targets) in enumerate(val_loader):
                     val_iter += 1
                     val_samples += inputs.size(0)
-                    inputVariable = Variable(inputs.permute(1, 0, 2, 3, 4).to(DEVICE))
+                    inputVariable = Variable(inputs.to(DEVICE))
                     labelVariable = Variable(targets.to(DEVICE))
                     with torch.no_grad():
                       output_label, _ = model(inputVariable)
