@@ -115,7 +115,7 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
 
     loss_fn = nn.CrossEntropyLoss()
 
-    optimizer_fn = torch.optim.Adam(train_params, lr=lr1, weight_decay=4e-5, eps=1e-4)
+    optimizer_fn = torch.optim.SGD(train_params, lr=1e-3, weight_decay=4e-5, momentum=0.9)
 
     optim_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer_fn, milestones=decay_step,
                                                            gamma=decay_factor)
@@ -138,7 +138,7 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
         model.resNet.layer4[2].conv2.train(True)
         model.resNet.fc.train(True)
         model.transf.train(True)
-        model.classifier.train(True)
+        model.fc.train(True)
         
         for i, (inputs, targets) in enumerate(train_loader):
             train_iter += 1
