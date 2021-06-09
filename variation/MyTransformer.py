@@ -64,5 +64,5 @@ class MyTransformer(nn.Module):
     def MLP_head(self,multi_head_output):
         out = self.classifier(multi_head_output)
         out = torch.add(out,multi_head_output)
-        out = torch.mean(out,1).view(self.d_model) #not really sure if mean is the best thing, some information is lost
+        out = torch.mean(out,1).view(self.d_model) #not really sure if mean is the best thing, BERT and VTN use the CLS token
         return out
