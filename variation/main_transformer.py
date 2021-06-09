@@ -148,7 +148,7 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
             ground_truth = Variable(targets.to(DEVICE))
             trainSamples += inputs.size(0)
 
-            logits, _ = model(input_frames)
+            logits = model(input_frames)
             loss = loss_fn(logits, ground_truth)
             loss.backward()
             optimizer_fn.step()
@@ -179,7 +179,7 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
                     inputVariable = Variable(inputs.to(DEVICE))
                     labelVariable = Variable(targets.to(DEVICE))
                     with torch.no_grad():
-                      output_label, _ = model(inputVariable)
+                      output_label = model(inputVariable)
                       val_loss = loss_fn(output_label, labelVariable)
                       val_loss_epoch += val_loss.item()
                     _, predicted = torch.max(output_label.data, 1)
