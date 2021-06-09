@@ -26,19 +26,19 @@ class MyTransformer(nn.Module):
 
 
     def forward(self,frame):
-        multi_head_output = temporal_attention(frame)
-        transformer_output = MLP_head(multi_head_output)
+        multi_head_output = self.temporal_attention(frame)
+        transformer_output = self.MLP_head(multi_head_output)
         return transformer_output
 
 
     def temporal_attention(self,frame):
         outputs = []
-        for i in range(heads):
+        for i in range(self.heads):
             Query = torch.matmul(query,self.W_q)
             Key = torch.matmul(key,self.W_k)
             Value = torch.matmul(value,self.W_v)
 
-            single_head_output = self_attention(Query,Key,Value)
+            single_head_output = self.self_attention(Query,Key,Value)
             outputs.append(single_head_output)
         heads_concat_output = torch.cat(outputs,axis=1)
 
