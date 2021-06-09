@@ -29,7 +29,7 @@ class selfAttentionModel(nn.Module):
 	    n_frames, n_channels, h, w = feature_conv.size()	# n_channels = 512 and h x w = 7x7
 	    mbedding = torch.squeeze(torch.squeeze(self.avgpool(feature_conv),3),2)
 	    
-	    logit = transformer(embedding[k])
+	    logit = self.transf(embedding[k])
             final_logit = nn.Linear(2048,61)
 	    predictions.append(final_logit)
 	logits.view(inputVariable.size(0), -1)
