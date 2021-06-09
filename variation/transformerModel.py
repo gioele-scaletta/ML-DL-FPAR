@@ -26,6 +26,7 @@ class selfAttentionModel(nn.Module):
             logit, feature_conv, feature_convNBN = self.resNet(inputVariable[t])
             n_frames, n_channels, h, w = feature_conv.size()	# n_channels = 512 and h x w = 7x7
             embedding = torch.squeeze(torch.squeeze(self.avgpool(feature_conv),3),2)
+	    
 	    for k in range(inputVariable.size(1)):
 		    logit = transformer(embedding[k])
             logit = nn.Linear(2048,61)
