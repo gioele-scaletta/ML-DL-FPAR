@@ -6,34 +6,32 @@ import numpy as np
 import glob
 import random
 
-# prima di tutto crea la classe con makeDataset, si fa dare la directory con i training frames
-#prova
-
-
-root_dir = os.path.join('/content/drive/MyDrive/ML_project/ego-rnn/content/GTEA61', '')
-
-
-def gen_split(root_dir,train_dataset_folder, stackSize = 7):
+def gen_split(root_dir,train_dataset_folder, stackSize = 5):
     Dataset_RGBFrame = []
     Labels = [] #Labels
     NumFrames = [] #
     root_dir = os.path.join(root_dir, 'processed_frames2')
     for dir_user in train_dataset_folder:
-        print('Splitting in ' + dir_user + ' folder')
+        print('Splittin in ' + dir_user + ' folder')
         class_id = 0
         dir = os.path.join(root_dir, dir_user) #Folder effettiva dove mettere i file
         action_sorted = sorted(os.listdir(dir))
         for target in action_sorted:
-          dir1 = os.path.join(dir, target) #/ego-rnn/content/GTEA61/processed_frames2/S4/close_peanut ,/ego-rnn/content/GTEA61/processed_frames2/S4/close_mustard ..
+          if target.startswith(".DS"):
+            continue
+          dir1 = os.path.join(dir, target) #/ego-rnn/content/GTEA61/flow_x_processed/S4/close_peanut ,/ego-rnn/content/GTEA61/flow_x_processed/S4/close_mustard ..
           insts = sorted(os.listdir(dir1)) # folder 1, 2 ,3 in each action
           if insts != []:
             for inst in insts:
+              if inst.startswith(".DS"):
+                continue
               inst_dir = os.path.join(dir1, inst)
-              numFrames = len(glob.glob1(inst_dir, '*[0-9].png')) # nome dei file per ogni azione [0-9 indica numero generico]
-              if numFrames >= stackSize: # numero di frame sufficiente
-                NumFrames.append(numFrames) # numero di frame x ogni folder
+              inst_dir_rgb = os.path.join(inst_dir, 'rgb')
+              numFrames_rgb = len(glob.glob1(inst_dir_rgb, '*[0-9].png')) # nome dei file per ogni azione [0-9 indica numero generico]
+              if numFrames_rgb >= 16: # numero di frame sufficiente
+                NumFrames.append(numFrames_rgb) # numero di frame x ogni folder
                 Labels.append(class_id) # numero della classe del azione
-                Dataset_RGBFrame.append(os.path.join(inst_dir, "rgb"))
+                Dataset_RGBFrame.append(inst_dir_rgb)
             class_id += 1
     return Dataset_RGBFrame, Labels, NumFrames
 
