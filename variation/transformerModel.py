@@ -30,10 +30,7 @@ class selfAttentionModel(nn.Module):
 	    mbedding = torch.squeeze(torch.squeeze(self.avgpool(feature_conv),3),2)
 	    
 	    logit = transformer(embedding[k])
-            logit = nn.Linear(2048,61)
-	    probs = F.softmax(logit)
-	    probabilities, idxs = probs.sort(1, True)   
-	    
-	    predictions.append(idxs[0])
-	    predictions_probabilities.append(probabilities[0])
-        return predictions,probabilities
+            final_logit = nn.Linear(2048,61)
+	    predictions.append(final_logit)
+	logits.view(inputVariable.size(0), -1)
+        return probs
