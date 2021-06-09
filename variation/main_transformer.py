@@ -93,7 +93,7 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
         train_params += [params]
     
     #Train the final classifier
-    for params in model.classifier.parameters():
+    for params in model.fc.parameters():
         params.requires_grad = True
         train_params += [params]
     
@@ -107,7 +107,7 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
 
     model.transf.train(True)
 
-    model.classifier.train(True)
+    model.fc.train(True)
     
     model.cuda()
 
