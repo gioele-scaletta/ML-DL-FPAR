@@ -45,7 +45,7 @@ class makeDataset(Dataset):
         self.fmt = '.png'
 
     def __len__(self):
-        return len(self.dataset_OpticalFlowX)
+        return len(self.datasetRGBFrame)
 
     def __getitem__(self, idx): #dataset[idx]
         vid_nameF = self.dataset_RGBFrame[idx]
