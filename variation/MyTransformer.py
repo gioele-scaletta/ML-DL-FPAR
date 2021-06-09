@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 from torch.autograd import Variable
+import math
 
 #manca positional embedding
 #layer normalization
@@ -34,23 +35,23 @@ class MyTransformer(nn.Module):
     def temporal_attention(self,frame):
         outputs = []
         for i in range(self.heads):
-            Query = torch.matmul(query,self.W_q)
-            Key = torch.matmul(key,self.W_k)
-            Value = torch.matmul(value,self.W_v)
+            Query = torch.matmul(frame,self.W_q)
+            Key = torch.matmul(frame,self.W_k)
+            Value = torch.matmul(frame,self.W_v)
 
             single_head_output = self.self_attention(Query,Key,Value)
             outputs.append(single_head_output)
         heads_concat_output = torch.cat(outputs,axis=1)
 
-        multi_head_output = torch.matmul(heads_concat_output,self.W_o)
+        multi_head_output = torch.matmul(heads_concat_output,self.W_o.cuda())
         multi_head_output = torch.unsqueeze(multi_head_output,2)
         return multi_head_output
 
 
     def self_attention(self,Query,Key,Value):
         Key_T = torch.transpose(Key)
-        Query_Key_T = torch.div(torch.matmul(Query,Key_T),torch.sqrt(torch.cast(self.d_k,dtype=torch.float32)))
-        attention = torch.nn.softmax(Query_Key_T,axis=-1)
+        Query_Key_T = torch.div(torch.matmul(Query,Key_T),math.sqrt(self.d_k))
+        attention = F.softmax(Query_Key_T,dim=-1)
         self_attention_output = torch.matmul(attention,Value)
         return self_attention_output
 
