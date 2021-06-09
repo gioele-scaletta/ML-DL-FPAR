@@ -53,6 +53,7 @@ def MLP_head(multi_head_output):
       nn.Linear(d_model, d_ff),
       nn.gelu(),
       nn.Dropout(0.1),
-      nn.Linear(d_ff, n_classes)
+      nn.Linear(d_ff, d_model)
     )
+    out = torch.add(out,multi_head_output)
     return out
