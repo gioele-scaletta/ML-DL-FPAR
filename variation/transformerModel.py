@@ -17,8 +17,11 @@ class selfAttentionModel(nn.Module):
         self.transf = MyTransformer()
         self.avgpool = nn.AvgPool2d(7)
         self.dropout = nn.Dropout(0.7)
-        self.fc = nn.Linear(mem_size, self.num_classes)
+        self.conv_f = nn.Conv1d(512, 61, kernel_size=1, stride=1)
+        self.fc = nn.Linear(2048, self.num_classes)
         self.classifier = nn.Sequential(self.dropout, self.fc)
+        nn.init.xavier_normal_(self.conv_f.weight)
+        nn.init.constant_(self.conv_f.bias, 0)
 
     def forward(self, inputVariable):
         logits = []
@@ -27,7 +30,7 @@ class selfAttentionModel(nn.Module):
         n_frames, n_channels, h, w = feature_conv.size()	# n_channels = 512 and h x w = 7x7
         embedding = torch.squeeze(torch.squeeze(self.avgpool(feature_conv),3),2)
         logit = self.transf(embedding)
-        final_logit = nn.Linear(2048,61)
+        final_logit = self.conv_f(logit)
         logits.append(final_logit)
     logits.view(inputVariable.size(0), -1)
     return logits
