@@ -33,5 +33,5 @@ class selfAttentionModel(nn.Module):
             final_logit = self.conv_f(logit).squeeze(2)
             logits.append(final_logit.view(1,inputVariable.size(1),-1))
         logits = torch.stack(logits,axis=0).squeeze(1)
-        logits = torch.mean(logits,1).view(-1,61)
+        
         return logits
