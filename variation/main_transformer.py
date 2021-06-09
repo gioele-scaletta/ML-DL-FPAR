@@ -87,7 +87,17 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
     for params in model.resNet.fc.parameters():
         params.requires_grad = True
         train_params += [params]
-
+        
+    #Train the weights' matrices in the transofmer
+    for params in model.transf.parameters():
+        params.requires_grad = True
+        train_params += [params]
+    
+    #Train the final classifier
+    for params in model.classifier.parameters():
+        params.requires_grad = True
+        train_params += [params]
+    
     model.resNet.layer4[0].conv1.train(True)
     model.resNet.layer4[0].conv2.train(True)
     model.resNet.layer4[1].conv1.train(True)
@@ -95,6 +105,11 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
     model.resNet.layer4[2].conv1.train(True)
     model.resNet.layer4[2].conv2.train(True)
     model.resNet.fc.train(True)
+
+    model.transf.train(True)
+
+    model.classifier.train(True)
+    
     model.cuda()
 
 
@@ -123,20 +138,22 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
         model.resNet.layer4[2].conv1.train(True)
         model.resNet.layer4[2].conv2.train(True)
         model.resNet.fc.train(True)
+        model.transf.train(True)
+        model.classifier.train(True)
         
         for i, (inputs, targets) in enumerate(train_loader):
             train_iter += 1
             iterPerEpoch += 1
             optimizer_fn.zero_grad()
-            inputVariable = Variable(inputs.permute(1, 0, 2, 3, 4).to(DEVICE))
-            labelVariable = Variable(targets.to(DEVICE))
-            trainSamples += inputs.size(0) #val_samples 
+            input_frames = Variable(inputs.to(DEVICE))
+            ground_truth = Variable(targets.to(DEVICE))
+            trainSamples += inputs.size(0)
 
-            output_label, _ = model(inputVariable)
-            loss = loss_fn(output_label, labelVariable)
+            logits, _ = model(input_frames)
+            loss = loss_fn(logits, ground_truth)
             loss.backward()
             optimizer_fn.step()
-            _, predicted = torch.max(output_label.data, 1)
+            _, predicted = torch.max(logits.data, 1)
             numCorrTrain += (predicted == targets.to(DEVICE)).sum()
             epoch_loss += loss.item()
           
@@ -147,9 +164,11 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
         print('Train: Epoch = {} | Loss = {} | Accuracy = {}'.format(epoch+1, avg_loss, trainAccuracy))
         writer.add_scalar('train/epoch_loss', avg_loss, epoch+1) # log del train
         writer.add_scalar('train/accuracy', trainAccuracy, epoch+1)
+        train_log_loss.write('Val Loss after {} epochs = {}\n'.format(epoch + 1, avg_loss))
+        train_log_acc.write('Val Accuracy after {} epochs = {}%\n'.format(epoch + 1, trainAccuracy))
 
         if val_data_dir is not None:
-            if (epoch+1) % 10 == 0:
+            if (epoch+1) % 1 == 0:
                 model.train(False)
                 val_loss_epoch = 0
                 val_iter = 0
@@ -164,9 +183,6 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
                       output_label, _ = model(inputVariable)
                       val_loss = loss_fn(output_label, labelVariable)
                       val_loss_epoch += val_loss.item()
-                    #output_label, _ = model(inputVariable)
-                    #val_loss = loss_fn(output_label, labelVariable)
-                    #val_loss_epoch += val_loss.item()
                     _, predicted = torch.max(output_label.data, 1)
                     numCorr += (predicted == targets.to(DEVICE)).sum()
                 val_accuracy = (numCorr / val_samples)
@@ -205,7 +221,7 @@ def __main__():
     numEpochs = 200 # 7 frame dovrebbe essere veloce
     lr1 = 1e-3 #defauld Learning rate
     decayRate = 0.1 #Learning rate decay rate
-    stepSize = [50,100,150]
+    stepSize = [25,75,150]
     memSize = 512 #ConvLSTM hidden state size
 
 
@@ -224,34 +240,5 @@ def __main__():
             stepSize,
             memSize)
 
-    stage = 2
-    trainDatasetDir = './GTEA61'
-    valDatasetDir = './GTEA61'
-    stage1Dict = './results_stage1/rgb/-stage1/model_rgb_state_dict.pth'
-    outDir = 'results_stage2' # label for folder name
-    seqLen = 7 # number of frames
-    trainBatchSize = 32 # bnumber of training samples to work through before the model’s internal parameters are update
-    valBatchSize = 32  # da valutare se 32 o 64
-    numEpochs = 200 # 7 frame dovrebbe essere veloce
-    lr1 = 1e-4 #defauld Learning rate
-    decayRate = 0.1 #Learning rate decay rate
-    stepSize = [50,100,150]
-    memSize = 512 #ConvLSTM hidden state size
-
-
-#Stage 2
-    main_run(stage,
-            trainDatasetDir,
-            valDatasetDir,
-            stage1Dict,
-            outDir,
-            seqLen, 
-            trainBatchSize,
-            valBatchSize,
-            numEpochs, 
-            lr1, 
-            decayRate, 
-            stepSize,
-            memSize)
 
 __main__()
