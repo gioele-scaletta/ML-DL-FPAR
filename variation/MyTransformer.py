@@ -31,7 +31,7 @@ class MyTransformer(nn.Module):
 
     def forward(self,frame):
         frame_position = self.positionalencoding(frame.size(0))
-        frame2 = torch.add(frame, frame_position)
+        frame2 = frame + frame_position
         #print(frame.size())
         multi_head_output = self.temporal_attention(frame.squeeze(0).type(torch.cuda.DoubleTensor))
         transformer_output = self.MLP_head(multi_head_output.cuda())
@@ -50,7 +50,7 @@ class MyTransformer(nn.Module):
         heads_concat_output = torch.cat(outputs,axis=1)
 
         multi_head_output = torch.matmul(heads_concat_output,self.W_o.cuda())
-        multi_head_output = torch.add(multi_head_output, frame.cuda())
+        multi_head_output = multi_head_output + frame.cuda()
         layer_normalization1 = torch.nn.LayerNorm(512).cuda()
         multi_head_output = layer_normalization1(multi_head_output.type(torch.cuda.FloatTensor)) #the error says "RuntimeError: expected scalar type Double but found Float" but actually works if I cast to float from double, bello
             
@@ -69,10 +69,9 @@ class MyTransformer(nn.Module):
 
     def MLP_head(self,multi_head_output):
         out = self.classifier(multi_head_output.type(torch.cuda.FloatTensor))
-        out = torch.add(out,multi_head_output)
+        out = out + multi_head_output
         
         layer_normalization2 = torch.nn.LayerNorm(512).cuda()
-
         out = layer_normalization2(out.squeeze(2).type(torch.cuda.FloatTensor))
         out = torch.mean(out,0).view(-1) #not really sure if mean is the best thing, BERT and VTN use the CLS token
         return out
