@@ -26,9 +26,9 @@ class selfAttentionModel(nn.Module):
             logit, feature_conv, feature_convNBN = self.resNet(inputVariable[t])
             n_frames, n_channels, h, w = feature_conv.size()	# n_channels = 512 and h x w = 7x7
             embedding = torch.squeeze(torch.squeeze(self.avgpool(feature_conv),3),2)
-	          logit = transformer(embedding)
-	          logit = F.softmax(logit)
+	    logit = transformer(embedding)
+	    logit = F.softmax(logit)
             probs, idxs = logit.sort(1, True)
-	          class_idx = idxs[:, 0]
+	    class_idx = idxs[:, 0]
             predictions.append(class_idx)
         return predictions
