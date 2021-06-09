@@ -14,7 +14,7 @@ class selfAttentionModel(nn.Module):
         self.resNet = resnetMod.resnet34(True, True)
         self.mem_size = mem_size
         self.weight_softmax = self.resNet.fc.weight
-        self.lstm_cell = MyConvLSTMCell(512, mem_size)
+        self.transf = MyTransformer()
         self.avgpool = nn.AvgPool2d(7)
         self.dropout = nn.Dropout(0.7)
         self.fc = nn.Linear(mem_size, self.num_classes)
