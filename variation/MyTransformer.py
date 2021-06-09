@@ -64,4 +64,5 @@ class MyTransformer(nn.Module):
     def MLP_head(self,multi_head_output):
         out = self.classifier(multi_head_output)
         out = torch.add(out,multi_head_output)
+        out = torch.mean(out,1).view(self.d_model)
         return out
