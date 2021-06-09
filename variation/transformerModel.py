@@ -33,4 +33,5 @@ class selfAttentionModel(nn.Module):
 	    probs = F.softmax(logit)
 	    probabilities, idxs = probs.sort(1, True)
 	    predictions.append(idxs[0])
-        return predictions
+	    predictions_probabilities.append(probabilities[0])
+        return predictions,probabilities
