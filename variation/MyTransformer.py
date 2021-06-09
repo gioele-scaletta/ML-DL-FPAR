@@ -6,9 +6,9 @@ from torch.autograd import Variable
 #manca positional embedding
 #layer normalization
 
-class MyConvLSTMCell(nn.Module):
+class MyTransformer(nn.Module):
     def __init__(self):
-        super(MyConvLSTMCell, self).__init__()
+        super(MyTransfomer, self).__init__()
         self.d_k = 16
         self.d_v = 16
         self.d_model = 512
