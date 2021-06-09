@@ -14,10 +14,10 @@ class MyTransformer(nn.Module):
         self.d_model = 512
         self.d_ff = 2048
         self.heads = 8
-        self.W_q = torch.nn.init.xavier_normal_(Variable(torch.randn(self.d_model, self.d_k).type(dtype=torch.float32), requires_grad=True).cuda())
-        self.W_k = torch.nn.init.xavier_normal_(Variable(torch.randn(self.d_model, self.d_k).type(dtype=torch.float32), requires_grad=True).cuda())
-        self.W_v = torch.nn.init.xavier_normal_(Variable(torch.randn(self.d_model, self.d_v).type(dtype=torch.float32), requires_grad=True).cuda())
-        self.W_o = torch.nn.init.xavier_normal_(Variable(torch.randn(self.heads*self.d_v, self.d_model).type(dtype=torch.float32), requires_grad=True).cuda())
+        self.W_q = torch.nn.init.xavier_normal_(Variable(torch.randn(self.d_model, self.d_k).type(dtype=torch.double), requires_grad=True).cuda())
+        self.W_k = torch.nn.init.xavier_normal_(Variable(torch.randn(self.d_model, self.d_k).type(dtype=torch.double), requires_grad=True).cuda())
+        self.W_v = torch.nn.init.xavier_normal_(Variable(torch.randn(self.d_model, self.d_v).type(dtype=torch.double), requires_grad=True).cuda())
+        self.W_o = torch.nn.init.xavier_normal_(Variable(torch.randn(self.heads*self.d_v, self.d_model).type(dtype=torch.double), requires_grad=True).cuda())
         self.conv1 = nn.Conv1d(self.d_model, self.d_ff, kernel_size=1, stride=1)
         self.activation = nn.GELU()
         self.dropout = nn.Dropout(0.1)
@@ -57,7 +57,7 @@ class MyTransformer(nn.Module):
 
 
     def self_attention(self,Query,Key,Value):
-        Key_T = torch.transpose(Key)
+        Key_T = torch.transpose(Key,0,1)
         Query_Key_T = torch.div(torch.matmul(Query,Key_T),math.sqrt(self.d_k))
         attention = F.softmax(Query_Key_T,dim=-1)
         self_attention_output = torch.matmul(attention,Value)
