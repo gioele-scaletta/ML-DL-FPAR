@@ -8,7 +8,7 @@ from torch.autograd import Variable
 
 class MyTransformer(nn.Module):
     def __init__(self):
-        super(MyTransfomer, self).__init__()
+        super(MyTransformer, self).__init__()
         self.d_k = 16
         self.d_v = 16
         self.d_model = 512
