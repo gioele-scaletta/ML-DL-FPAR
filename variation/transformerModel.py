@@ -24,14 +24,16 @@ class selfAttentionModel(nn.Module):
         predictions = []
         for t in range(inputVariable.size(0)):
             logit, feature_conv, feature_convNBN = self.resNet(inputVariable[t])
-            n_frames, n_channels, h, w = feature_conv.size()	# n_channels = 512 and h x w = 7x7
-            embedding = torch.squeeze(torch.squeeze(self.avgpool(feature_conv),3),2)
+            
+		
+	    n_frames, n_channels, h, w = feature_conv.size()	# n_channels = 512 and h x w = 7x7
+	    mbedding = torch.squeeze(torch.squeeze(self.avgpool(feature_conv),3),2)
 	    
-	    for k in range(inputVariable.size(1)):
-		    logit = transformer(embedding[k])
+	    logit = transformer(embedding[k])
             logit = nn.Linear(2048,61)
 	    probs = F.softmax(logit)
-	    probabilities, idxs = probs.sort(1, True)
+	    probabilities, idxs = probs.sort(1, True)   
+	    
 	    predictions.append(idxs[0])
 	    predictions_probabilities.append(probabilities[0])
         return predictions,probabilities
