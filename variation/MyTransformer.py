@@ -19,7 +19,7 @@ class MyTransformer(nn.Module):
         self.W_v = torch.nn.init.xavier_normal_(Variable(torch.randn(self.d_model, self.d_v).type(dtype=torch.float32), requires_grad=True))
         self.W_o = torch.nn.init.xavier_normal_(Variable(torch.randn(heads*self.d_v, self.d_model).type(dtype=torch.float32), requires_grad=True))
         self.fc1 = nn.Linear(self.d_model, self.d_ff)
-        self.activation = nn.gelu()
+        self.activation = nn.GELU()
         self.dropout = nn.Dropout(0.1)
         self.fc2 = nn.Linear(self.d_ff, self.d_model)
         self.classifier = nn.Sequential(self.fc1,self.activation,self.dropout,self.fc2)
