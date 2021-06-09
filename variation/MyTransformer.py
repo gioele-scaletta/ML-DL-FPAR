@@ -14,10 +14,10 @@ class MyTransformer(nn.Module):
         self.d_model = 512
         self.d_ff = 2048
         self.heads = 8
-        self.W_q = torch.nn.init.xavier_normal_(Variable(torch.randn(self.d_model, self.d_k).type(dtype=torch.float32), requires_grad=True))
-        self.W_k = torch.nn.init.xavier_normal_(Variable(torch.randn(self.d_model, self.d_k).type(dtype=torch.float32), requires_grad=True))
-        self.W_v = torch.nn.init.xavier_normal_(Variable(torch.randn(self.d_model, self.d_v).type(dtype=torch.float32), requires_grad=True))
-        self.W_o = torch.nn.init.xavier_normal_(Variable(torch.randn(self.heads*self.d_v, self.d_model).type(dtype=torch.float32), requires_grad=True))
+        self.W_q = torch.nn.init.xavier_normal_(Variable(torch.randn(self.d_model, self.d_k).type(dtype=torch.float32), requires_grad=True).cuda())
+        self.W_k = torch.nn.init.xavier_normal_(Variable(torch.randn(self.d_model, self.d_k).type(dtype=torch.float32), requires_grad=True).cuda())
+        self.W_v = torch.nn.init.xavier_normal_(Variable(torch.randn(self.d_model, self.d_v).type(dtype=torch.float32), requires_grad=True).cuda())
+        self.W_o = torch.nn.init.xavier_normal_(Variable(torch.randn(self.heads*self.d_v, self.d_model).type(dtype=torch.float32), requires_grad=True).cuda())
         self.conv1 = nn.Conv1d(self.d_model, self.d_ff, kernel_size=1, stride=1)
         self.activation = nn.GELU()
         self.dropout = nn.Dropout(0.1)
@@ -31,8 +31,9 @@ class MyTransformer(nn.Module):
 
 
     def forward(self,frame):
-        frame = torch.add(frame, self.positional_encoding(frame.size(1)))
-        multi_head_output = self.temporal_attention(frame)
+        frame2 = torch.add(frame, torch.tensor(self.positionalencoding(frame.size(0))).cuda())
+        print(frame.size())
+        multi_head_output = self.temporal_attention(frame2)
         transformer_output = self.MLP_head(multi_head_output)
         return transformer_output
 
@@ -70,13 +71,13 @@ class MyTransformer(nn.Module):
         out = torch.mean(out,1).view(self.d_model) #not really sure if mean is the best thing, BERT and VTN use the CLS token
         return out
     
-    def get_angles(pos, i, d_model):
+    def get_angles(self,pos, i, d_model):
         angle_rates = 1 / np.power(10000, (2 * (i//2)) / np.float32(self.d_model))
         return pos * angle_rates
 
-    def positionalencoding(position):
+    def positionalencoding(self,position):
         # NOTE the code is from https://www.tensorflow.org/tutorials/text/transformer, not ours
-        angle_rads = get_angles(np.arange(position)[:, np.newaxis],np.arange(self.d_model)[np.newaxis, :],self.d_model)
+        angle_rads = self.get_angles(np.arange(position)[:, np.newaxis],np.arange(self.d_model)[np.newaxis, :],self.d_model)
   
         # apply sin to even indices in the array; 2i
         angle_rads[:, 0::2] = np.sin(angle_rads[:, 0::2])
