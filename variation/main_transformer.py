@@ -55,7 +55,6 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
     train_params = []
 
     model = selfAttentionModel(num_classes=num_classes, mem_size=memSize)
-    model.load_state_dict(torch.load(stage1_dict), strict=True)
     model.train(False)
     for params in model.parameters():
         params.requires_grad = False
