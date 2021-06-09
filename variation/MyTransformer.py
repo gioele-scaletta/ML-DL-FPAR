@@ -18,7 +18,11 @@ class MyConvLSTMCell(nn.Module):
         self.W_k = torch.nn.init.xavier_normal_(Variable(torch.randn(self.d_model, self.d_k).type(dtype=torch.float32), requires_grad=True))
         self.W_v = torch.nn.init.xavier_normal_(Variable(torch.randn(self.d_model, self.d_v).type(dtype=torch.float32), requires_grad=True))
         self.W_o = torch.nn.init.xavier_normal_(Variable(torch.randn(heads*self.d_v, self.d_model).type(dtype=torch.float32), requires_grad=True))
-    
+        self.fc1 = nn.Linear(self.d_model, self.d_ff)
+        self.activation = nn.gelu()
+        self.dropout = nn.Dropout(0.1)
+        self.fc2 = nn.Linear(self.d_ff, self.d_model)
+        self.classifier = nn.Sequential(self.fc1,self.activation,self.dropout,self.fc2)
 
 
     def forward(self,frame):
@@ -52,11 +56,6 @@ class MyConvLSTMCell(nn.Module):
 
 
     def MLP_head(self,multi_head_output):
-        out = nn.Sequential(
-          nn.Linear(self.d_model, self.d_ff),
-          nn.gelu(),
-          nn.Dropout(0.1),
-          nn.Linear(self.d_ff, self.d_model)
-        )
+        out = self.classifier(multi_head_output)
         out = torch.add(out,multi_head_output)
         return out
