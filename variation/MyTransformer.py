@@ -3,9 +3,8 @@ import torch.nn as nn
 from torch.nn import functional as F
 from torch.autograd import Variable
 import math
+import numpy as np
 
-#manca positional embedding
-#layer normalization
 
 class MyTransformer(nn.Module):
     def __init__(self):
@@ -32,7 +31,7 @@ class MyTransformer(nn.Module):
 
 
     def forward(self,frame):
-        frame = torch.add(frame, self.positional_encoding(7,512) 
+        frame = torch.add(frame, self.positional_encoding(frame.size(1)) 
         multi_head_output = self.temporal_attention(frame)
         transformer_output = self.MLP_head(multi_head_output)
         return transformer_output
@@ -72,14 +71,12 @@ class MyTransformer(nn.Module):
         return out
     
     def get_angles(pos, i, d_model):
-        angle_rates = 1 / np.power(10000, (2 * (i//2)) / np.float32(d_model))
+        angle_rates = 1 / np.power(10000, (2 * (i//2)) / np.float32(self.d_model))
         return pos * angle_rates
 
-    def positionalencoding(position, d_model):
+    def positionalencoding(position):
         # NOTE the code is from https://www.tensorflow.org/tutorials/text/transformer, not ours
-        angle_rads = get_angles(np.arange(position)[:, np.newaxis],
-                          np.arange(d_model)[np.newaxis, :],
-                          d_model)
+        angle_rads = get_angles(np.arange(position)[:, np.newaxis],np.arange(self.d_model)[np.newaxis, :],self.d_model)
   
         # apply sin to even indices in the array; 2i
         angle_rads[:, 0::2] = np.sin(angle_rads[:, 0::2])
