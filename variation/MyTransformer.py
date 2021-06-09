@@ -31,7 +31,7 @@ class MyTransformer(nn.Module):
 
 
     def forward(self,frame):
-        frame = torch.add(frame, self.positional_encoding(frame.size(1)) 
+        frame = torch.add(frame, self.positional_encoding(frame.size(1)))
         multi_head_output = self.temporal_attention(frame)
         transformer_output = self.MLP_head(multi_head_output)
         return transformer_output
