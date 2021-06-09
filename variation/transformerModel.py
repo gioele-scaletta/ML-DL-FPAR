@@ -18,7 +18,7 @@ class selfAttentionModel(nn.Module):
         self.avgpool = nn.AvgPool2d(7)
         self.dropout = nn.Dropout(0.7)
         self.conv_f = nn.Conv1d(512, 61, kernel_size=1, stride=1)
-        self.fc = nn.Linear(2048, self.num_classes)
+        self.fc = nn.Linear(self.mem_size, self.num_classes)
         self.classifier = nn.Sequential(self.dropout, self.fc)
         nn.init.xavier_normal_(self.conv_f.weight)
         nn.init.constant_(self.conv_f.bias, 0)
