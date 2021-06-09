@@ -4,6 +4,7 @@ from torch.nn import functional as F
 from torch.autograd import Variable
 
 #manca positional embedding
+#layer normalization
 
 def transformer(frame):
     multi_head_output = temporal_attention(frame)
