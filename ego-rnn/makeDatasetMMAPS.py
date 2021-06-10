@@ -77,7 +77,7 @@ class makeDataset(Dataset):
             
               fm_name = vid_nameM + '/' + 'map' + str(int(np.floor(i))).zfill(4) + self.fmt
               img = Image.open(fm_name)
-              inpSeqM.append(self.spatial_transform(img, inv=False, flow=True))
+              inpSeqM.append(self.spatial_transform(img))
 
             except:
               print('file non trovato', fl_name)
