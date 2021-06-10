@@ -114,8 +114,8 @@ class Normalize(object):
         """
         # TODO: make efficient
         if flow is True:
-            tensor = ff.functional.interpolate(tensor.unsqueeze(0), size=(7,7)).squeeze(0) #in input the image is [1,224,224] so unsqueeze because interpolate wants [1,1,224,224]
-            return tensor
+            mean = [np.mean(self.mean)]
+            std = [np.mean(self.std)]
         else:
             mean = self.mean
             std = self.std
