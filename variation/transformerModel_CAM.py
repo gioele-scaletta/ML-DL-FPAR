@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 from torch.autograd import Variable
-from MyTransformer import *
+from MyTransformer2 import *
 
 
 class selfAttentionModel(nn.Module):
