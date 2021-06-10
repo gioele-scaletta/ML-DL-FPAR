@@ -1,11 +1,13 @@
 from __future__ import print_function, division
-from objectAttentionModelConvLSTM import *
+from attention_and_self_super import *
 from spatial_transforms import (Compose, ToTensor, CenterCrop, Scale, Normalize, MultiScaleCornerCrop,
                                 RandomHorizontalFlip)
 from tensorboardX import SummaryWriter
-from makeDatasetRGB import *
+from makeDatasetMMAPS import *
 import argparse
 import sys
+import torch.nn as ff
+import math
 
 DEVICE = "cuda"
 
@@ -36,12 +38,13 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
     normalize = Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     spatial_transform = Compose([Scale(256), RandomHorizontalFlip(), MultiScaleCornerCrop([1, 0.875, 0.75, 0.65625], 224),
                                  ToTensor(), normalize])
+    
     print(train_data_dir)
 
     vid_seq_train = makeDataset(train_data_dir,train_usr, spatial_transform, seqLen, True)
 
     train_loader = torch.utils.data.DataLoader(vid_seq_train, batch_size=trainBatchSize,
-                            shuffle=True, num_workers=2, pin_memory=True) #ok
+                            shuffle=True, num_workers=2, pin_memory=True, ) #ok
 
     #valuta
     if val_data_dir is not None:
@@ -121,6 +124,7 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
     model.cuda()
 
     loss_fn = nn.CrossEntropyLoss()
+    loss_mmaps = nn.BCELoss()
 
 
     optimizer_fn = torch.optim.Adam(train_params, lr=lr1, weight_decay=4e-5, eps=1e-4)
@@ -157,18 +161,36 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
             labelVariable = Variable(targets.to(DEVICE))
             trainSamples += inputs.size(0) #val_samples 
             
-            output_label, _ , predicted_mmaps = model(inputVariable)
+            output_label, _ , predicted_mmaps = model(inputVariable, stage)
+
             loss_rgb = loss_fn(output_label, labelVariable)
-            
-            if stage == 2: 
-                loss_mmaps = loss_fn(nn.functional.softmax(predicted_mmaps,dim=1), nn.functional.interpolate(mmapsVariable, size=(7,7), mode='bilinear'))
-                tot_loss = loss_rgb + loss_mmaps
+            tot_loss = loss_rgb
+
+
+            if stage == 2:
+                mmaps_resized = []
+                for i in range(mmapsVariable.size()[0]):
+                    mmapsVariable[i][mmapsVariable[i] >= 0] = 1
+                    mmapsVariable[i][mmapsVariable[i] < 0] = 0
+                    mmaps_resized.append(ff.functional.interpolate(mmapsVariable[i], size=(7,7)))
+                
+                mmaps_resized = torch.stack(mmaps_resized,0)
+                mmaps_resized = mmaps_resized.squeeze(2)
+                nf, bz, h, w = mmaps_resized.size()
+                mmaps_resized = mmaps_resized.view(nf, bz, h*w)
+                mmaps_resized = mmaps_resized.permute(1,0,2)
+                print(mmaps_resized.size())
+                predicted_mmaps = nn.functional.softmax(predicted_mmaps,dim=1)
+                loss_mmaps_tot = 0
+                for i in range(mmaps_resized.size()[0]):
+                    loss_mmaps_tot += loss_mmaps(predicted_mmaps[i], mmaps_resized[i])
+                tot_loss += loss_mmaps_tot.item()                
             
             tot_loss.backward()
             optimizer_fn.step()
             _, predicted = torch.max(output_label.data, 1)
             numCorrTrain += (predicted == targets.to(DEVICE)).sum()
-            epoch_loss += loss_rgb.item() + loss_mmaps.item()
+            epoch_loss += tot_loss.item()
           
         optim_scheduler.step()
         avg_loss = epoch_loss/iterPerEpoch
@@ -179,19 +201,19 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
         writer.add_scalar('train/accuracy', trainAccuracy, epoch+1)
 
         if val_data_dir is not None:
-            if (epoch+1) % 10 == 0:
+            if (epoch+1) % 1 == 0:
                 model.train(False)
                 val_loss_epoch = 0
                 val_iter = 0
                 val_samples = 0
                 numCorr = 0
-                for j, (inputs, targets) in enumerate(val_loader):
+                for j, (inputs, _ , targets) in enumerate(val_loader):
                     val_iter += 1
                     val_samples += inputs.size(0)
                     inputVariable = Variable(inputs.permute(1, 0, 2, 3, 4).to(DEVICE))
                     labelVariable = Variable(targets.to(DEVICE))
                     with torch.no_grad():
-                      output_label, _ = model(inputVariable)
+                      output_label, _ , _ = model(inputVariable, stage)
                       val_loss = loss_fn(output_label, labelVariable)
                       val_loss_epoch += val_loss.item()
                     #output_label, _ = model(inputVariable)
@@ -232,10 +254,10 @@ def __main__():
     seqLen = 7 # number of frames
     trainBatchSize = 32 # bnumber of training samples to work through before the model’s internal parameters are update
     valBatchSize = 32  # da valutare se 32 o 64
-    numEpochs = 200 # 7 frame dovrebbe essere veloce
+    numEpochs = 150 # 7 frame dovrebbe essere veloce
     lr1 = 1e-3 #defauld Learning rate
     decayRate = 0.1 #Learning rate decay rate
-    stepSize = [50,100,150]
+    stepSize = [20,50,76]
     memSize = 512 #ConvLSTM hidden state size
 
 
@@ -252,7 +274,7 @@ def __main__():
             lr1, 
             decayRate, 
             stepSize,
-            memSize)
+            memSize)    
 
     stage = 2
     trainDatasetDir = './GTEA61'
@@ -262,7 +284,7 @@ def __main__():
     seqLen = 7 # number of frames
     trainBatchSize = 32 # bnumber of training samples to work through before the model’s internal parameters are update
     valBatchSize = 32  # da valutare se 32 o 64
-    numEpochs = 200 # 7 frame dovrebbe essere veloce
+    numEpochs = 150 # 7 frame dovrebbe essere veloce
     lr1 = 1e-4 #defauld Learning rate
     decayRate = 0.1 #Learning rate decay rate
     stepSize = [50,100,150]
@@ -285,4 +307,3 @@ def __main__():
             memSize)
 
 __main__()
-

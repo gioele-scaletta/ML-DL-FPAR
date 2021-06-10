@@ -29,7 +29,9 @@ class attentionMap(nn.Module):
         cam_img = cam_img / np.max(cam_img)
         cam_img = np.uint8(255 * cam_img)
         output_cam = cv2.resize(cam_img, size_upsample)
-        img = cv2.cvtColor(np.uint8(img), cv2.COLOR_RGB2BGR)
-        heatmap = cv2.applyColorMap(output_cam, cv2.COLORMAP_JET)
+        #PScegliere colore più consono con
+        #img = np.uint8(img)
+        img = cv2.cvtColor(np.uint8(img), cv2.COLOR_RGB2BGR) #https://docs.opencv.org/3.4/d8/d01/group__imgproc__color__conversions.html#gga4e0972be5de079fed4e3a10e24ef5ef0a01a06e50cd3689f5e34e26daf3faaa39
+        heatmap = cv2.applyColorMap(output_cam, cv2.COLORMAP_JET) #https://docs.opencv.org/master/d3/d50/group__imgproc__colormap.html
         result = heatmap * 0.3 + img * 0.5
         return result
