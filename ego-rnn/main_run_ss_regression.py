@@ -182,6 +182,12 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
 
 
             if stage == 2:
+<<<<<<< HEAD:ego-rnn/main_run_ss_regression.py
+                nf, bz, c, h, w = mmapsVariable.size()
+                mmaps_target = mmapsVariable.contiguous().view(nf*bz*c*h*w) #contiguous because otherwise returns error, when data is not contiguous it doesnt manage to make view, 
+                                                                            #size of view so that it creates one big vector, no difference as long as also the target is the same size
+                mmaps_predicted = predicted_mmaps.view(nf*bz*c*h*w) #create also here one big vector of size nf*bz*c*h*w (note c=1 because black or white)
+=======
                 mmaps_resized = []
                 for i in range(mmapsVariable.size()[0]):
                     mmapsVariable[i][mmapsVariable[i] >= 0] = 1
@@ -194,6 +200,7 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
                 mmaps_resized = mmaps_resized.view(nf, bz, h*w)
                 mmaps_resized = mmaps_resized.permute(1,0,2)
                 predicted_mmaps = nn.functional.softmax(predicted_mmaps,dim=1)
+>>>>>>> main:ego-rnn/main_run_ss_cross_entropy
                 loss_mmaps_tot = 0
                 loss_mmaps_tot += loss_mmaps(mmaps_predicted, mmaps_target.to(DEVICE)) #long tensor because it's what crossEntropyLoss requires
                 tot_loss += loss_mmaps_tot                

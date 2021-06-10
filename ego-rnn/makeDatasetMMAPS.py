@@ -58,20 +58,25 @@ class makeDataset(Dataset):
         inpSeqM = []
         self.spatial_transform.randomize_parameters()
         for i in np.linspace(1, numFrame, self.seqLen, endpoint=False): 
-            fl_name = vid_nameF + '/' + 'rgb' + str(int(np.floor(i))).zfill(4) + self.fmt
-            try:
-              img = Image.open(fl_name)
-              inpSeq.append(self.spatial_transform(img.convert('RGB')))
-            
-              fm_name = vid_nameM + '/' + 'map' + str(int(np.floor(i))).zfill(4) + self.fmt
-              img = Image.open(fm_name)
-              inpSeqM.append(self.spatial_transform(img))
-
-            except:
-              print('file non trovato', fl_name)
-              print(numFrames_mmaps)
-            
-        
+            go_on = False
+            j = i
+            k=1
+            while(go_on==False):
+                try:
+                  fm_name = vid_nameM + '/' + 'map' + str(int(np.floor(j))).zfill(4) + self.fmt
+                  img = Image.open(fm_name)
+                  inpSeqM.append(self.spatial_transform(img, inv=False, flow=True))
+                  fl_name = vid_nameF + '/' + 'rgb' + str(int(np.floor(j))).zfill(4) + self.fmt
+                  img = Image.open(fl_name)
+                  inpSeq.append(self.spatial_transform(img.convert('RGB')))
+                  go_on = True
+                except:
+                  if j == numFrame:
+                    k=-1
+                    j=i-1
+                  else:
+                    j += k*1
+                  continue
         inpSeq = torch.stack(inpSeq, 0)
         inpSeqM = torch.stack(inpSeqM, 0)
         return inpSeq, inpSeqM, label
