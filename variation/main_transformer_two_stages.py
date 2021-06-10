@@ -61,7 +61,7 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
             params.requires_grad = False
     #stage 2 : train anche per 
     else:
-        model = serlfAttentionModel(num_classes=num_classes, mem_size=memSize)
+        model = selfAttentionModel(num_classes=num_classes, mem_size=memSize)
         model.load_state_dict(torch.load(stage1_dict), strict=True)
         model.train(False)
     
