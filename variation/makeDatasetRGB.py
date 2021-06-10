@@ -6,10 +6,8 @@ import numpy as np
 import glob
 import random
 
-root_dir = os.path.join('/content/drive/MyDrive/ML_project/ego-rnn/content/GTEA61', '')
 def gen_split(root_dir,train_dataset_folder, stackSize = 5):
     Dataset_RGBFrame = []
-    Dataset_MMAPSFrame = []
     Labels = [] #Labels
     NumFrames = [] #
     root_dir = os.path.join(root_dir, 'processed_frames2')
@@ -29,49 +27,38 @@ def gen_split(root_dir,train_dataset_folder, stackSize = 5):
                 continue
               inst_dir = os.path.join(dir1, inst)
               inst_dir_rgb = os.path.join(inst_dir, 'rgb')
-              inst_dir_mmaps = os.path.join(inst_dir, 'mmaps')
               numFrames_rgb = len(glob.glob1(inst_dir_rgb, '*[0-9].png')) # nome dei file per ogni azione [0-9 indica numero generico]
-              numFrames_mmaps = len(glob.glob1(inst_dir_mmaps, '*[0-9].png'))
-              if numFrames_rgb >= 7 and numFrames_mmaps>=7: # numero di frame sufficiente
+              if numFrames_rgb >= 16: # numero di frame sufficiente
                 NumFrames.append(numFrames_rgb) # numero di frame x ogni folder
                 Labels.append(class_id) # numero della classe del azione
                 Dataset_RGBFrame.append(inst_dir_rgb)
-                Dataset_MMAPSFrame.append(inst_dir_mmaps)
             class_id += 1
-    return Dataset_RGBFrame, Dataset_MMAPSFrame, Labels, NumFrames
+    return Dataset_RGBFrame, Labels, NumFrames
+
 class makeDataset(Dataset):
     def __init__(self, root_dir,train_dataset_folder, spatial_transform, seqLen=7, train=True):
-        self.dataset_RGBFrame, self.dataset_MMAPSFrame, self.labels, self.numFrames = gen_split(root_dir,train_dataset_folder, 5)
+        self.dataset_RGBFrame, self.labels, self.numFrames = gen_split(root_dir,train_dataset_folder, 7)
         self.spatial_transform = spatial_transform
         self.train = train
         self.seqLen = seqLen
-        self.stackSize = 5
+        self.stackSize = 7
         self.fmt = '.png'
+
     def __len__(self):
-        return len(self.dataset_RGBFrame)
+        return len(self.datasetRGBFrame)
+
     def __getitem__(self, idx): #dataset[idx]
         vid_nameF = self.dataset_RGBFrame[idx]
-        vid_nameM = self.dataset_MMAPSFrame[idx]
+        
         label = self.labels[idx]
         numFrame = self.numFrames[idx]
+
         inpSeq = []
-        inpSeqM = []
+
         self.spatial_transform.randomize_parameters()
         for i in np.linspace(1, numFrame, self.seqLen, endpoint=False): 
             fl_name = vid_nameF + '/' + 'rgb' + str(int(np.floor(i))).zfill(4) + self.fmt
-            try:
-              img = Image.open(fl_name)
-              inpSeq.append(self.spatial_transform(img.convert('RGB')))
-            
-              fm_name = vid_nameM + '/' + 'map' + str(int(np.floor(i))).zfill(4) + self.fmt
-              img = Image.open(fm_name)
-              inpSeqM.append(self.spatial_transform(img))
-
-            except:
-              print('file non trovato', fl_name)
-              print(numFrames_mmaps)
-            
-        
+            img = Image.open(fl_name)
+            inpSeq.append(self.spatial_transform(img.convert('RGB')))
         inpSeq = torch.stack(inpSeq, 0)
-        inpSeqM = torch.stack(inpSeqM, 0)
-        return inpSeq, inpSeqM, label
+        return inpSeq, label

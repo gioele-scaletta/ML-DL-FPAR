@@ -7,37 +7,40 @@ import random
 import glob
 import sys
 
-
-def gen_split(root_dir, stackSize):
-    DatasetX = []
+def gen_split(root_dir,train_dataset_folder, stackSize = 5):
+    DatasetX = [] #Path to RGB frame
     DatasetY = []
     DatasetF = []
-    Labels = []
-    NumFrames = []
-    root_dir = os.path.join(root_dir, 'flow_x')
-    for dir_user in sorted(os.listdir(root_dir)):
+    Labels = [] #Labels
+    NumFrames = [] #
+    root_dir = os.path.join(root_dir, 'flow_x_processed')
+    for dir_user in train_dataset_folder:
+        print('Splittin in ' + dir_user + ' folder')
         class_id = 0
-        dir = os.path.join(root_dir, dir_user)
-        for target in sorted(os.listdir(dir)):
-            dir1 = os.path.join(dir, target)
-            insts = sorted(os.listdir(dir1))
-            if insts != []:
-                for inst in insts:
-                    inst_dir = os.path.join(dir1, inst)
-                    numFrames = len(glob.glob1(inst_dir, '*.jpg'))
-                    if numFrames >= stackSize:
-                        DatasetX.append(inst_dir)
-                        DatasetY.append(inst_dir.replace('flow_x', 'flow_y'))
-                        DatasetF.append(inst_dir.replace('flow_x', 'frames'))
-                        Labels.append(class_id)
-                        NumFrames.append(numFrames)
+        dir = os.path.join(root_dir, dir_user) #Folder effettiva dove mettere i file
+        action_sorted = sorted(os.listdir(dir))
+        for target in action_sorted:
+          dir1 = os.path.join(dir, target) #/ego-rnn/content/GTEA61/flow_x_processed/S4/close_peanut ,/ego-rnn/content/GTEA61/flow_x_processed/S4/close_mustard ..
+          insts = sorted(os.listdir(dir1)) # folder 1, 2 ,3 in each action
+          if insts != []:
+            for inst in insts:
+              inst_dir = os.path.join(dir1, inst)
+              numFrames = len(glob.glob1(inst_dir, '*[0-9].png')) # nome dei file per ogni azione [0-9 indica numero generico]
+              if numFrames >= stackSize: # numero di frame sufficiente
+                NumFrames.append(numFrames) # numero di frame x ogni folder
+                DatasetX.append(inst_dir)
+                Labels.append(class_id) # numero della classe del azione
+                DatasetF.append(os.path.join(inst_dir.replace('flow_x_processed', 'processed_frames2'), "rgb"))
+                #print(inst_dir)
+                DatasetY.append(inst_dir.replace('flow_x_processed', 'flow_y_processed'))
             class_id += 1
     return DatasetX, DatasetY, DatasetF, Labels, NumFrames
 
 
+
 class makeDataset(Dataset):
-    def __init__(self, root_dir, spatial_transform=None, sequence=False, stackSize=5,
-                 train=True, numSeg=5, fmt='.jpg', phase='train', seqLen = 25):
+    def __init__(self, root_dir,train_dataset_folder, spatial_transform=None, sequence=False, stackSize=5,
+                 train=True, numSeg=5, fmt='.png', phase='train', seqLen = 16):
         """
         Args:
             root_dir (string): Directory with all the images.
@@ -46,7 +49,7 @@ class makeDataset(Dataset):
         """
 
         self.imagesX, self.imagesY, self.imagesF, self.labels, self.numFrames = gen_split(
-            root_dir, stackSize)
+            root_dir, train_dataset_folder, stackSize)
         self.spatial_transform = spatial_transform
         self.train = train
         self.numSeg = numSeg
@@ -76,11 +79,11 @@ class makeDataset(Dataset):
                 inpSeq = []
                 for k in range(self.stackSize):
                     i = k + int(startFrame)
-                    fl_name = vid_nameX + '/flow_x_' + str(int(round(i))).zfill(5) + '.jpg'
+                    fl_name = vid_nameX + '/flow_x_' + str(int(round(i))).zfill(5) + '.png'
                     img = Image.open(fl_name)
                     inpSeq.append(self.spatial_transform(img.convert('L'), inv=True, flow=True))
                     # fl_names.append(fl_name)
-                    fl_name = vid_nameY + '/flow_y_' + str(int(round(i))).zfill(5) + '.jpg'
+                    fl_name = vid_nameY + '/flow_y_' + str(int(round(i))).zfill(5) + '.png'
                     img = Image.open(fl_name)
                     inpSeq.append(self.spatial_transform(img.convert('L'), inv=False, flow=True))
                 inpSeqSegs.append(torch.stack(inpSeq, 0).squeeze())
@@ -96,18 +99,19 @@ class makeDataset(Dataset):
             inpSeq = []
             for k in range(self.stackSize):
                 i = k + int(startFrame)
-                fl_name = vid_nameX + '/flow_x_' + str(int(round(i))).zfill(5) + '.jpg'
+                fl_name = vid_nameX + '/flow_x_' + str(int(round(i))).zfill(5) + '.png'
                 img = Image.open(fl_name)
                 inpSeq.append(self.spatial_transform(img.convert('L'), inv=True, flow=True))
                 # fl_names.append(fl_name)
-                fl_name = vid_nameY + '/flow_y_' + str(int(round(i))).zfill(5) + '.jpg'
+                fl_name = vid_nameY + '/flow_y_' + str(int(round(i))).zfill(5) + '.png'
                 img = Image.open(fl_name)
                 inpSeq.append(self.spatial_transform(img.convert('L'), inv=False, flow=True))
             inpSeqSegs = torch.stack(inpSeq, 0).squeeze(1)
         inpSeqF = []
         for i in np.linspace(1, numFrame, self.seqLen, endpoint=False):
-            fl_name = vid_nameF + '/' + 'image_' + str(int(np.floor(i))).zfill(5) + self.fmt
+            fl_name = vid_nameF + '/' + 'rgb' + str(int(np.floor(i))).zfill(4) + self.fmt
             img = Image.open(fl_name)
             inpSeqF.append(self.spatial_transform(img.convert('RGB')))
         inpSeqF = torch.stack(inpSeqF, 0)
         return inpSeqSegs, inpSeqF, label#, vid_nameF#, fl_name
+
