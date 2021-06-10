@@ -228,10 +228,10 @@ def __main__():
     seqLen = 16 # number of frames
     trainBatchSize = 32 # bnumber of training samples to work through before the model’s internal parameters are update
     valBatchSize = 32  # da valutare se 32 o 64
-    numEpochs = 200 # 7 frame dovrebbe essere veloce
+    numEpochs = 50 # 7 frame dovrebbe essere veloce
     lr1 = 1e-3 #defauld Learning rate
     decayRate = 0.1 #Learning rate decay rate
-    stepSize = [25,75,150]
+    stepSize = [25]
     memSize = 512 #ConvLSTM hidden state size
 
 
