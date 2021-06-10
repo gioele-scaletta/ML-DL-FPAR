@@ -26,14 +26,6 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
         sys.exit()
     os.makedirs(model_folder)
 
-    # Log files
-    writer = SummaryWriter(model_folder)
-    train_log_loss = open((model_folder + '/train_log_loss.txt'), 'w')
-    train_log_acc = open((model_folder + '/train_log_acc.txt'), 'w')
-    val_log_loss = open((model_folder + '/val_log_loss.txt'), 'w')
-    val_log_acc = open((model_folder + '/val_log_acc.txt'), 'w')
-
-
     # Data loader
     normalize = Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     spatial_transform = Compose([Scale(256), RandomHorizontalFlip(), MultiScaleCornerCrop([1, 0.875, 0.75, 0.65625], 224),
@@ -153,7 +145,6 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
         iterPerEpoch = 0
         model.lstm_cell.train(True)
         model.classifier.train(True)
-        writer.add_scalar('lr', optimizer_fn.param_groups[0]['lr'], epoch+1)
         if stage == 2:
             model.resNet.layer4[0].conv1.train(True)
             model.resNet.layer4[0].conv2.train(True)
@@ -176,39 +167,28 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
             output_label, _ , predicted_mmaps = model(inputVariable, stage)
 
             loss_rgb = loss_fn(output_label, labelVariable)
-            tot_loss = loss_rgb
-
+            
+            tot_loss = loss_rgb.item()
 
             if stage == 2:
-                mmaps_resized = []
-                for i in range(mmapsVariable.size()[0]):
-                    mmapsVariable[i][mmapsVariable[i] >= 0] = 1
-                    mmapsVariable[i][mmapsVariable[i] < 0] = 0
-                    mmaps_resized.append(ff.functional.interpolate(mmapsVariable[i], size=(7,7)))
-                
-                mmaps_resized = torch.stack(mmaps_resized,0)
-                mmaps_resized = mmaps_resized.squeeze(2)
-                nf, bz, h, w = mmaps_resized.size()
-                mmaps_resized = mmaps_resized.view(nf, bz, h*w)
-                mmaps_resized = mmaps_resized.permute(1,0,2)
-                predicted_mmaps = nn.functional.softmax(predicted_mmaps,dim=1)
-                loss_mmaps_tot = 0
-                loss_mmaps_tot += loss_mmaps(mmaps_predicted, mmaps_target.type(torch.LongTensor).to(DEVICE)) #long tensor because it's what crossEntropyLoss requires
-                tot_loss += loss_mmaps_tot                
-            
-            tot_loss.backward()
+                nf, bz, c, h, w = mmapsVariable.size()
+                mmaps_target = mmapsVariable.contiguous().view(nf*bz*c*h*w) #contiguous because otherwise returns error, when data is not contiguous it doesnt manage to make view, 
+                                                                            #size of view so that it creates one big vector, no difference as long as also the target is the same size
+                mmaps_predicted = predicted_mmaps.view(-1,2) #create also here one big vector of size nf*bz*c*h*w (note c=1 because black or white)
+                loss_mmaps_tot = loss_mmaps(mmaps_predicted, mmaps_target.type(torch.LongTensor).to(DEVICE)) #long tensor because it's what crossEntropyLoss requires
+                loss_mmaps_tot.backward(retain_graph=True)
+                tot_loss += loss_mmaps_tot.item()                
+            loss_rgb.backward()
             optimizer_fn.step()
             _, predicted = torch.max(output_label.data, 1)
             numCorrTrain += (predicted == targets.to(DEVICE)).sum()
-            epoch_loss += tot_loss.item()
+            epoch_loss += loss_mmaps_tot.item()
           
         optim_scheduler.step()
         avg_loss = epoch_loss/iterPerEpoch
         trainAccuracy = (numCorrTrain.data.item() / trainSamples)
 
         print('Train: Epoch = {} | Loss = {} | Accuracy = {}'.format(epoch+1, avg_loss, trainAccuracy))
-        writer.add_scalar('train/epoch_loss', avg_loss, epoch+1) # log del train
-        writer.add_scalar('train/accuracy', trainAccuracy, epoch+1)
 
         if val_data_dir is not None:
             if (epoch+1) % 1 == 0:
@@ -234,10 +214,6 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
                 val_accuracy = (numCorr / val_samples)
                 avg_val_loss = val_loss_epoch / val_iter
                 print('Val: Epoch = {} | Loss {} | Accuracy = {}'.format(epoch + 1, avg_val_loss, val_accuracy))
-                writer.add_scalar('val/epoch_loss', avg_val_loss, epoch + 1)
-                writer.add_scalar('val/accuracy', val_accuracy, epoch + 1)
-                val_log_loss.write('Val Loss after {} epochs = {}\n'.format(epoch + 1, avg_val_loss))
-                val_log_acc.write('Val Accuracy after {} epochs = {}%\n'.format(epoch + 1, val_accuracy))
                 if val_accuracy > min_accuracy:
                     save_path_model = (model_folder + '/model_rgb_state_dict.pth')
                     torch.save(model.state_dict(), save_path_model)
@@ -246,15 +222,7 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
                 if (epoch+1) % 10 == 0:
                     save_path_model = (model_folder + '/model_rgb_state_dict_epoch' + str(epoch+1) + '.pth')
                     torch.save(model.state_dict(), save_path_model)
-    
-    train_log_loss.close()
-    train_log_acc.close()
-    val_log_acc.close()
-    val_log_loss.close()
-    writer.export_scalars_to_json(model_folder + "/all_scalars.json")
-    writer.close()
-
-
+        
 def __main__():
     stage = 1
     trainDatasetDir = './GTEA61'
@@ -264,10 +232,10 @@ def __main__():
     seqLen = 16 # number of frames
     trainBatchSize = 32 # bnumber of training samples to work through before the model’s internal parameters are update
     valBatchSize = 32  # da valutare se 32 o 64
-    numEpochs = 1 # 7 frame dovrebbe essere veloce
+    numEpochs = 200 # 7 frame dovrebbe essere veloce
     lr1 = 1e-3 #defauld Learning rate
     decayRate = 0.1 #Learning rate decay rate
-    stepSize = [25,100,150]
+    stepSize = [25,75,125]
     memSize = 512 #ConvLSTM hidden state size
 
 
@@ -277,7 +245,7 @@ def __main__():
     stage = 2
     trainDatasetDir = './GTEA61'
     valDatasetDir = './GTEA61'
-    stage1Dict = 'model_first_stage_classification_ss_16.pth'
+    stage1Dict = './results_stage1/rgb/-stage1/model_rgb_state_dict.pth'
     outDir = 'results_stage2' # label for folder name
     seqLen = 16 # number of frames
     trainBatchSize = 32 # bnumber of training samples to work through before the model’s internal parameters are update

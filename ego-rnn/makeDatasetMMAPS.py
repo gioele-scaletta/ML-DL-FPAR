@@ -6,13 +6,7 @@ import numpy as np
 import glob
 import random
 
-# prima di tutto crea la classe con makeDataset, si fa dare la directory con i training frames
-#prova
-
-
 root_dir = os.path.join('/content/drive/MyDrive/ML_project/ego-rnn/content/GTEA61', '')
-
-
 def gen_split(root_dir,train_dataset_folder, stackSize = 5):
     Dataset_RGBFrame = []
     Dataset_MMAPSFrame = []
@@ -38,14 +32,13 @@ def gen_split(root_dir,train_dataset_folder, stackSize = 5):
               inst_dir_mmaps = os.path.join(inst_dir, 'mmaps')
               numFrames_rgb = len(glob.glob1(inst_dir_rgb, '*[0-9].png')) # nome dei file per ogni azione [0-9 indica numero generico]
               numFrames_mmaps = len(glob.glob1(inst_dir_mmaps, '*[0-9].png'))
-              if numFrames_rgb >= 7 and numFrames_mmaps==numFrames_rgb: # numero di frame sufficiente
+              if numFrames_rgb >= 7 and numFrames_mmaps>=7: # numero di frame sufficiente
                 NumFrames.append(numFrames_rgb) # numero di frame x ogni folder
                 Labels.append(class_id) # numero della classe del azione
                 Dataset_RGBFrame.append(inst_dir_rgb)
                 Dataset_MMAPSFrame.append(inst_dir_mmaps)
             class_id += 1
     return Dataset_RGBFrame, Dataset_MMAPSFrame, Labels, NumFrames
-
 class makeDataset(Dataset):
     def __init__(self, root_dir,train_dataset_folder, spatial_transform, seqLen=7, train=True):
         self.dataset_RGBFrame, self.dataset_MMAPSFrame, self.labels, self.numFrames = gen_split(root_dir,train_dataset_folder, 5)
@@ -54,20 +47,15 @@ class makeDataset(Dataset):
         self.seqLen = seqLen
         self.stackSize = 5
         self.fmt = '.png'
-
     def __len__(self):
         return len(self.dataset_RGBFrame)
-
     def __getitem__(self, idx): #dataset[idx]
         vid_nameF = self.dataset_RGBFrame[idx]
         vid_nameM = self.dataset_MMAPSFrame[idx]
-        
         label = self.labels[idx]
         numFrame = self.numFrames[idx]
-
         inpSeq = []
         inpSeqM = []
-        
         self.spatial_transform.randomize_parameters()
         for i in np.linspace(1, numFrame, self.seqLen, endpoint=False): 
             fl_name = vid_nameF + '/' + 'rgb' + str(int(np.floor(i))).zfill(4) + self.fmt
