@@ -128,8 +128,7 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
 
     optimizer_fn = torch.optim.SGD(train_params, lr=1e-3, weight_decay=4e-5, momentum=0.9)
 
-    optim_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer_fn, milestones=decay_step,
-                                                           gamma=decay_factor)
+    optim_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer_fn, 10)
 
     train_iter = 0
     min_accuracy = 0
