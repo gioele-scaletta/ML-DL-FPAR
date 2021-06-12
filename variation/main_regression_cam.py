@@ -106,7 +106,6 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
         model.resNet.layer4[2].conv1.train(True)
         model.resNet.layer4[2].conv2.train(True)
         model.resNet.fc.train(True)
-        model.ss_task.train(True)
 
       #Train the weights' matrices in the transofmer
     for params in model.transf.parameters():
@@ -118,8 +117,12 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
         params.requires_grad = True
         train_params += [params]    
 
+    for params in model.ss_task.parameters():
+        params.requires_grad = True
+        train_params += [params]
+        
     model.transf.train(True)
-
+    model.ss_task.train(True)
     model.fc.train(True)
     
     model.cuda()
@@ -152,7 +155,7 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
             model.resNet.layer4[2].conv1.train(True)
             model.resNet.layer4[2].conv2.train(True)
             model.resNet.fc.train(True)
-            model.ss_task.train(True)
+        model.ss_task.train(True)
         model.transf.train(True)
         model.fc.train(True)
         
@@ -173,13 +176,12 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
             tot_loss = loss + loss_mmaps_TOT
             tot_loss.backward()
             optimizer_fn.step()
-            optim_scheduler.step()
             _, predicted = torch.max(logits.data, 1)
             numCorrTrain += (predicted == targets.to(DEVICE)).sum()
             epoch_loss += loss.item()
             epoch_loss_mmaps += loss_mmaps_TOT.item()
           
-        
+        optim_scheduler.step()
         avg_loss = epoch_loss/iterPerEpoch
         avg_loss_mmaps = epoch_loss_mmaps/iterPerEpoch
         trainAccuracy = (numCorrTrain.data.item() / trainSamples)
