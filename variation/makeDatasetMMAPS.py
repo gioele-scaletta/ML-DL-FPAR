@@ -7,7 +7,7 @@ import glob
 import random
 
 root_dir = os.path.join('/content/drive/MyDrive/ML_project/ego-rnn/content/GTEA61', '')
-def gen_split(root_dir,train_dataset_folder, stackSize = 5):
+def gen_split(root_dir,train_dataset_folder, stackSize):
     Dataset_RGBFrame = []
     Dataset_MMAPSFrame = []
     Labels = [] #Labels
@@ -32,7 +32,7 @@ def gen_split(root_dir,train_dataset_folder, stackSize = 5):
               inst_dir_mmaps = os.path.join(inst_dir, 'mmaps')
               numFrames_rgb = len(glob.glob1(inst_dir_rgb, '*[0-9].png')) # nome dei file per ogni azione [0-9 indica numero generico]
               numFrames_mmaps = len(glob.glob1(inst_dir_mmaps, '*[0-9].png'))
-              if numFrames_rgb >= 16 and numFrames_mmaps>=7: # numero di frame sufficiente
+              if numFrames_rgb >= stackSize and numFrames_mmaps>= stackSize: # numero di frame sufficiente
                 NumFrames.append(numFrames_rgb) # numero di frame x ogni folder
                 Labels.append(class_id) # numero della classe del azione
                 Dataset_RGBFrame.append(inst_dir_rgb)
@@ -40,8 +40,8 @@ def gen_split(root_dir,train_dataset_folder, stackSize = 5):
             class_id += 1
     return Dataset_RGBFrame, Dataset_MMAPSFrame, Labels, NumFrames
 class makeDataset(Dataset):
-    def __init__(self, root_dir,train_dataset_folder, spatial_transform, seqLen=7, train=True):
-        self.dataset_RGBFrame, self.dataset_MMAPSFrame, self.labels, self.numFrames = gen_split(root_dir,train_dataset_folder, 5)
+    def __init__(self, root_dir,train_dataset_folder, spatial_transform, seqLen, train=True):
+        self.dataset_RGBFrame, self.dataset_MMAPSFrame, self.labels, self.numFrames = gen_split(root_dir,train_dataset_folder, seqLen)
         self.spatial_transform = spatial_transform
         self.train = train
         self.seqLen = seqLen
