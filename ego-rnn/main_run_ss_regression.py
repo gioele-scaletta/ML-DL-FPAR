@@ -1,5 +1,5 @@
 from __future__ import print_function, division
-from attention_and_self_super import *
+from attention_and_self_super_regr import *
 from spatial_transforms_regr import (Compose, ToTensor, CenterCrop, Scale, Normalize, MultiScaleCornerCrop,
                                 RandomHorizontalFlip)
 from tensorboardX import SummaryWriter
