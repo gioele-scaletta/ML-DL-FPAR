@@ -4,7 +4,7 @@ import torch.nn as nn
 from torch.nn import functional as F
 from torch.autograd import Variable
 from MyConvLSTMCell import *
-from ss_task import *
+from ss_task_regr import *
 #v2
 
 class attentionModel(nn.Module):
