@@ -131,10 +131,10 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
     loss_fn = nn.CrossEntropyLoss()
     loss_mmaps = nn.SmoothL1Loss()
     if stage == 1:
-        optimizer_fn = torch.optim.SGD(train_params, lr=1e-3, weight_decay=4e-5, momentum=0.9)
+        optimizer_fn = torch.optim.Adam(train_params, lr=1e-3, weight_decay=1e-4, eps=1e-4)
         optim_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer_fn, milestones=decay_step, gamma=decay_factor)
     else:
-        optimizer_fn = torch.optim.SGD(train_params, lr=1e-4, weight_decay=4e-5, momentum=0.9)
+        optimizer_fn = torch.optim.Adam(train_params, lr=1e-4, weight_decay=1e-4, eps=1e-4)
         optim_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer_fn, 10)
         #optim_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer_fn, T_0=10, T_mult=1, eta_min=1e-6, last_epoch=-1, verbose=False)
     train_iter = 0
@@ -240,7 +240,7 @@ def __main__():
     valDatasetDir = './GTEA61'
     stage1Dict = None
     outDir = 'results_stage1' # label for folder name
-    seqLen = 7 # number of frames
+    seqLen = 16 # number of frames
     trainBatchSize = 32 # bnumber of training samples to work through before the model’s internal parameters are update
     valBatchSize = 32  # da valutare se 32 o 64
     numEpochs = 150 # 7 frame dovrebbe essere veloce
@@ -270,7 +270,7 @@ def __main__():
     valDatasetDir = './GTEA61'
     stage1Dict = './results_stage1/rgb/-stage1/model_rgb_state_dict.pth'
     outDir = 'results_stage2' # label for folder name
-    seqLen = 7 # number of frames
+    seqLen = 16 # number of frames
     trainBatchSize = 32 # bnumber of training samples to work through before the model’s internal parameters are update
     valBatchSize = 32  # da valutare se 32 o 64
     numEpochs = 150 # 7 frame dovrebbe essere veloce
