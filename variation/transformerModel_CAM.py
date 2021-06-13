@@ -1,5 +1,5 @@
 import torch
-import resnetMod
+import AdaptedMobileNetV2
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
@@ -11,9 +11,9 @@ class selfAttentionModel(nn.Module):
     def __init__(self, num_classes=61, mem_size=512):
         super(selfAttentionModel, self).__init__()
         self.num_classes = num_classes
-        self.resNet = resnetMod.resnet34(True, True)
+        self.mobileNet = AdaptedMobileNetV2.mobilenet_V2(True, True)
         self.mem_size = mem_size
-        self.weight_softmax = self.resNet.fc.weight
+        self.weight_softmax = self.mobileNet.classifier.weight
         self.transf = MyTransformer()
         self.avgpool = nn.AvgPool2d(7)
         self.dropout = nn.Dropout(0.7)
@@ -26,7 +26,8 @@ class selfAttentionModel(nn.Module):
     def forward(self, inputVariable):
         logits = []
         for t in range(inputVariable.size(0)):
-            logit, feature_conv, feature_convNBN = self.resNet(inputVariable[t])
+            # prepare CAM as for resnet but now use last layer of mobileNetV2
+            logit, feature_convNBN, feature_conv = self.mobileNet(inputVariable[t])
             bz, nc, h, w = feature_conv.size()    #bz = batch size    #nc = number of channels    #h = height   #w = width
             feature_conv1 = feature_conv.view(bz, nc, h*w)    #make vector from matrix (hxw -> h*w)
             probs, idxs = logit.sort(1, True)   #sort in order from highest to lowest the score of each class in each batch
@@ -35,6 +36,8 @@ class selfAttentionModel(nn.Module):
             attentionMAP = F.softmax(cam.squeeze(1), dim=1)
             attentionMAP = attentionMAP.view(attentionMAP.size(0), 1, 7, 7)
             attentionFeat = feature_convNBN * attentionMAP.expand_as(feature_conv)
+            
+            # as input for the transformer use the features after attention
             embedding = torch.squeeze(torch.squeeze(self.avgpool(attentionFeat),3),2)
             logit = self.transf(embedding)
             final_logit = self.fc(logit.cuda())
