@@ -132,8 +132,13 @@ class MobileNetV2(nn.Module):
                 stride = s if i == 0 else 1
                 features.append(block(input_channel, output_channel, stride, expand_ratio=t, norm_layer=norm_layer))
                 input_channel = output_channel
+        self.final_input_channel = input_channel
         # building last several layers
-        features.append(ConvBNReLU(input_channel, self.last_channel, kernel_size=1, norm_layer=norm_layer))
+        # at this point the inverted residuals are finished, the next steps are conv and BN, so I have to look inside ConvBNReLU to split the outputs of BN and noBN
+        # maybe better to not use the function ConvBNReLU at all, since it is short anyways
+        #features.append(ConvBNReLU(input_channel, self.last_channel, kernel_size=1, norm_layer=norm_layer))
+        
+        
         # make it nn.Sequential
         self.features = nn.Sequential(*features)
 
@@ -142,7 +147,19 @@ class MobileNetV2(nn.Module):
             nn.Dropout(0.2),
             nn.Linear(self.last_channel, num_classes),
         )
+        
+        self.convolution = nn.Sequential(
+            nn.Conv2d(self.final_input_channel, self.last_channel, kernel_size=1, stride=1, padding=0, groups=1, bias=False)
+        )
 
+        self.normalization = nn.Sequential(
+            nn.BathNorm2d,
+        )
+        
+        self.finalReLU = nn.Sequential(
+            nn.ReLU6(inplace=True)
+        )
+        
         # weight initialization
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -160,10 +177,15 @@ class MobileNetV2(nn.Module):
         # This exists since TorchScript doesn't support inheritance, so the superclass method
         # (this one) needs to have a name other than `forward` that can be accessed in a subclass
         x = self.features(x)
+        feats_noBN = self.convolution(x)
+        feats_BN = self.normalization(feats_noBN)
+        relu_out = nn.ReLU6(inplace=True)
+        x = self.finalReLU(feats_BN)
+        
         # Cannot use "squeeze" as batch-size can be 1 => must use reshape with x.shape[0]
         x = nn.functional.adaptive_avg_pool2d(x, 1).reshape(x.shape[0], -1)
         x = self.classifier(x)
-        return x
+        return x,feats_noBN,feats_BN
 
     def forward(self, x):
         return self._forward_impl(x)
