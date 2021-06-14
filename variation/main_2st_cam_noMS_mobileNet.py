@@ -67,12 +67,13 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
         for params in model.parameters():
             params.requires_grad = False
         
-        for params in model.mobileNet.features.children()[-2:]:
+        mobileNet_seq = nn.Sequential(*list(model.children())[-2:])
+        for params in mobileNet_seq.parameters():
             params.requires_grad = True
             train_params += [params]
         
-        model.mobileNet.features.children()[-2:].train(True)
-        
+        model.mobileNet_seq.train(True)
+
     #Train the weights' matrices in the transofmer
     for params in model.transf.parameters():
         params.requires_grad = True
@@ -92,8 +93,8 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
     
     loss_fn = nn.CrossEntropyLoss()
 
-    optimizer_fn = torch.optim.SGD(train_params, lr=1e-3, weight_decay=4e-5, momentum=0.9)
-
+    #optimizer_fn = torch.optim.SGD(train_params, lr=1e-3, weight_decay=4e-5, momentum=0.9)
+    optimizer_fn = torch.optim.Adam(train_params, lr=lr1, weight_decay=4e-5, eps=1e-4)
     optim_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer_fn, 10)
 
     train_iter = 0
@@ -107,7 +108,7 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
         iterPerEpoch = 0
         writer.add_scalar('lr', optimizer_fn.param_groups[0]['lr'], epoch+1)
         if stage == 2:
-            model.mobileNet.features.children()[-2:].train(True)
+            model.mobileNet_seq.train(True)
         model.transf.train(True)
         model.fc.train(True)
         
@@ -188,7 +189,7 @@ def __main__():
     seqLen = 16 # number of frames
     trainBatchSize = 32 # bnumber of training samples to work through before the model’s internal parameters are update
     valBatchSize = 32  # da valutare se 32 o 64
-    numEpochs = 150 # 7 frame dovrebbe essere veloce
+    numEpochs = 100 # 7 frame dovrebbe essere veloce
     lr1 = 1e-3 #defauld Learning rate
     decayRate = 0.1 #Learning rate decay rate
     stepSize = [25]
