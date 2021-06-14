@@ -11,9 +11,9 @@ class selfAttentionModel(nn.Module):
     def __init__(self, num_classes=61, mem_size=512):
         super(selfAttentionModel, self).__init__()
         self.num_classes = num_classes
-        self.mobileNet = AdaptedMobileNetV2.mobilenet_V2(True, True)
+        self.mobileNet = AdaptedMobileNetV2.mobilenet_v2(True, True)
         self.mem_size = mem_size
-        self.weight_softmax = self.mobileNet.classifier.weight
+        self.weight_softmax = self.mobileNet.classifier.children()[1].weight
         self.transf = MyTransformer()
         self.avgpool = nn.AvgPool2d(7)
         self.dropout = nn.Dropout(0.7)
