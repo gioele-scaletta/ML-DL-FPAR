@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 from torch import Tensor
-from .utils import load_state_dict_from_url
+from torch.hub import load_state_dict_from_url
 from typing import Callable, Any, Optional, List
 
 
@@ -66,12 +66,10 @@ class InvertedResidual(nn.Module):
         oup: int,
         stride: int,
         expand_ratio: int,
-        norm_layer: Optional[Callable[..., nn.Module]] = None,
-        last: bool
+        norm_layer: Optional[Callable[..., nn.Module]] = None
     ) -> None:
         super(InvertedResidual, self).__init__()
         self.stride = stride
-        self.last = last
         assert stride in [1, 2]
 
         if norm_layer is None:
@@ -88,11 +86,8 @@ class InvertedResidual(nn.Module):
             # dw
             ConvBNReLU(hidden_dim, hidden_dim, stride=stride, groups=hidden_dim, norm_layer=norm_layer),
             # pw-linear
-            # -3
             nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
-            # -2
             norm_layer(oup),
-            # -1
         ])
         self.conv = nn.Sequential(*layers)
         self.out_channels = oup
@@ -100,23 +95,9 @@ class InvertedResidual(nn.Module):
 
     def forward(self, x: Tensor) -> Tensor:
         if self.use_res_connect:
-            if self.last == True:
-                global feats_noBN
-                global feats
-                feats_noBN = self.conv[:-2](x)
-                feats = self.conv[-3:-1](feats_noBN)
-                result = x + self.conv[-1](feats)
-            else:
-                result = x + self.conv(x)
-            return result
+            return x + self.conv(x)
         else:
-            if self.last == True:
-                feats_noBN = self.conv[:-2](x)
-                feats = self.conv[-3:-1](feats_noBN)
-                result = self.conv[-1](feats)
-                return result  
-            else:
-                return self.conv(x)
+            return self.conv(x)
 
 
 class MobileNetV2(nn.Module):
@@ -177,10 +158,8 @@ class MobileNetV2(nn.Module):
             output_channel = _make_divisible(c * width_mult, round_nearest)
             for i in range(n):
                 stride = s if i == 0 else 1
-                features.append(block(input_channel, output_channel, stride, expand_ratio=t, norm_layer=norm_layer, last=False))
+                features.append(block(input_channel, output_channel, stride, expand_ratio=t, norm_layer=norm_layer))
                 input_channel = output_channel
-            features.append(block(input_channel, output_channel, stride, expand_ratio=t, norm_layer=norm_layer, last=True))
-            input_channel = output_channel
         # building last several layers
         features.append(ConvBNReLU(input_channel, self.last_channel, kernel_size=1, norm_layer=norm_layer))
         # make it nn.Sequential
@@ -208,12 +187,12 @@ class MobileNetV2(nn.Module):
     def _forward_impl(self, x: Tensor) -> Tensor:
         # This exists since TorchScript doesn't support inheritance, so the superclass method
         # (this one) needs to have a name other than `forward` that can be accessed in a subclass
-        x = self.features(x)
+        feats = self.features(x)
         # Cannot use "squeeze" as batch-size can be 1
-        x = nn.functional.adaptive_avg_pool2d(x, (1, 1))
+        x = nn.functional.adaptive_avg_pool2d(feats, (1, 1))
         x = torch.flatten(x, 1)
         x = self.classifier(x)
-        return x, feats_noBN, feats
+        return x, feats
 
     def forward(self, x: Tensor) -> Tensor:
         return self._forward_impl(x)
