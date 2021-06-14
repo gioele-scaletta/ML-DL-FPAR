@@ -186,7 +186,7 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
 
             if stage == 2:
 
-               nf, bz, c, h, w = mmapsVariable.size()
+                nf, bz, c, h, w = mmapsVariable.size()
                 mmaps_target = mmapsVariable.contiguous().view(nf*bz*c*h*w) #contiguous because otherwise returns error, when data is not contiguous it doesnt manage to make view, 
                                                                             #size of view so that it creates one big vector, no difference as long as also the target is the same size
                 mmaps_predicted = predicted_mmaps.view(nf*bz*c*h*w) #create also here one big vector of size nf*bz*c*h*w (note c=1 because black or white)
