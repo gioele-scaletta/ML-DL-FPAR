@@ -41,7 +41,7 @@ class attentionModel(nn.Module):
             state = self.lstm_cell(attentionFeat, state)
             
             if stage == 2:
-                ss_task_feats = self.ss_task_regr(feature_conv) # a tensor of size [32,7*7] is returned
+                ss_task_feats = self.ss_task(feature_conv) # a tensor of size [32,7*7] is returned
                 ss_task_feats = ss_task_feats.view(feature_conv.size(0), 7*7) #now that it is a regression problem no more 2 and no more softmax needed
                 feats_ss.append(ss_task_feats)
         
