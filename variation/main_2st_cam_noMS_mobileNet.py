@@ -1,5 +1,5 @@
 from __future__ import print_function, division
-from transformerModel import *
+from transformerModel_CAM import *
 from spatial_transforms import (Compose, ToTensor, CenterCrop, Scale, Normalize, MultiScaleCornerCrop,
                                 RandomHorizontalFlip)
 from tensorboardX import SummaryWriter
@@ -54,7 +54,6 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
 
     train_params = []
     if stage == 1:
-
         model = selfAttentionModel(num_classes=num_classes, mem_size=memSize)
         model.train(False)
         for params in model.parameters():
@@ -68,16 +67,11 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
         for params in model.parameters():
             params.requires_grad = False
         
-        for params in model.mobileNet.convolution.parameters():
+        for params in model.mobileNet.features.children()[-2:]:
             params.requires_grad = True
             train_params += [params]
         
-        for params in model.mobileNet.classifier.parameters():
-            params.requires_grad = True
-            train_params += [params]
-        
-        model.mobileNet.convolution.train(True)
-        model.mobileNet.classifier.train(True)
+        model.mobileNet.features.children()[-2:].train(True)
         
     #Train the weights' matrices in the transofmer
     for params in model.transf.parameters():
@@ -95,8 +89,7 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
     
     model.cuda()
 
-
-
+    
     loss_fn = nn.CrossEntropyLoss()
 
     optimizer_fn = torch.optim.SGD(train_params, lr=1e-3, weight_decay=4e-5, momentum=0.9)
@@ -113,8 +106,8 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
         trainSamples = 0
         iterPerEpoch = 0
         writer.add_scalar('lr', optimizer_fn.param_groups[0]['lr'], epoch+1)
-        model.mobileNet.convolution.train(True)
-        model.mobileNet.classifier.train(True)
+        if stage == 2:
+            model.mobileNet.features.children()[-2:].train(True)
         model.transf.train(True)
         model.fc.train(True)
         
@@ -195,7 +188,7 @@ def __main__():
     seqLen = 16 # number of frames
     trainBatchSize = 32 # bnumber of training samples to work through before the model’s internal parameters are update
     valBatchSize = 32  # da valutare se 32 o 64
-    numEpochs = 50 # 7 frame dovrebbe essere veloce
+    numEpochs = 150 # 7 frame dovrebbe essere veloce
     lr1 = 1e-3 #defauld Learning rate
     decayRate = 0.1 #Learning rate decay rate
     stepSize = [25]
