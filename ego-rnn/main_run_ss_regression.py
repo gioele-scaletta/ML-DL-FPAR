@@ -134,12 +134,15 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
     model.cuda()
 
     loss_fn = nn.CrossEntropyLoss()
-    loss_mmaps = nn.MSELoss()
-    #loss_mmaps = nn.SmoothL1Loss() #huber loss
+    #loss_mmaps = nn.MSELoss()
+    loss_mmaps = nn.SmoothL1Loss() #huber loss
     #loss_mmaps = nn.L1Loss()
     #loss_mmaps = nn.KLDivLoss()
     
-    optimizer_fn = torch.optim.Adam(train_params, lr=lr1, weight_decay=4e-5, eps=1e-4)
+    if (step==1):
+      optimizer_fn = torch.optim.Adam(train_params, lr=lr1, weight_decay=4e-5, eps=1e-4)
+     else:
+      optimizer_fn = torch.optim.Adam(train_params, lr=lr1, weight_decay=4e-5, eps=1e-4)
 
     optim_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer_fn, milestones=decay_step,
                                                            gamma=decay_factor)
@@ -183,27 +186,14 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
 
             if stage == 2:
 
-                nf, bz, c, h, w = mmapsVariable.size()
+               nf, bz, c, h, w = mmapsVariable.size()
                 mmaps_target = mmapsVariable.contiguous().view(nf*bz*c*h*w) #contiguous because otherwise returns error, when data is not contiguous it doesnt manage to make view, 
                                                                             #size of view so that it creates one big vector, no difference as long as also the target is the same size
-                mmaps_predicted = predicted_mmaps.contiguous().view(nf*bz*c*h*w) #create also here one big vector of size nf*bz*c*h*w (note c=1 because black or white)
-
-                mmaps_resized = []
-                for i in range(mmapsVariable.size()[0]):
-                    mmapsVariable[i][mmapsVariable[i] >= 0] = 1
-                    mmapsVariable[i][mmapsVariable[i] < 0] = 0
-                    mmaps_resized.append(ff.functional.interpolate(mmapsVariable[i], size=(7,7)))
-                
-                mmaps_resized = torch.stack(mmaps_resized,0)
-                mmaps_resized = mmaps_resized.squeeze(2)
-                nf, bz, h, w = mmaps_resized.size()
-                mmaps_resized = mmaps_resized.view(nf, bz, h*w)
-                mmaps_resized = mmaps_resized.permute(1,0,2)
-                predicted_mmaps = nn.functional.softmax(predicted_mmaps,dim=1)
+                mmaps_predicted = predicted_mmaps.view(nf*bz*c*h*w) #create also here one big vector of size nf*bz*c*h*w (note c=1 because black or white)
 
                 loss_mmaps_tot = 0
                 loss_mmaps_tot += loss_mmaps(mmaps_predicted, mmaps_target.to(DEVICE)) #long tensor because it's what crossEntropyLoss requires
-                tot_loss += loss_mmaps_tot                
+                tot_loss += loss_mmaps_tot        
             
             tot_loss.backward()
             optimizer_fn.step()
@@ -273,7 +263,7 @@ def __main__():
     seqLen = 7 # number of frames
     trainBatchSize = 32 # bnumber of training samples to work through before the model’s internal parameters are update
     valBatchSize = 32  # da valutare se 32 o 64
-    numEpochs = 250 # 7 frame dovrebbe essere veloce
+    numEpochs = 200 # 7 frame dovrebbe essere veloce
     lr1 = 1e-3 #defauld Learning rate
     decayRate = 0.1 #Learning rate decay rate
     stepSize = [25,75,150]
