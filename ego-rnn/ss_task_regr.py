@@ -21,7 +21,7 @@ class ss_task(nn.Module):
         #cross_entropy(feat, maps)
         
     def forward(self, x):
-        out = torch.sigmoid(x)
+        out = torch.relu(x)
         out = self.conv(out)
         out = torch.flatten(out,1)
         out = self.fc(out)
