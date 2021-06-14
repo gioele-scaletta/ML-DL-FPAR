@@ -1,214 +1,93 @@
 import torch
-from torch import nn
-from torch import Tensor
-from torch.hub import load_state_dict_from_url
-from typing import Callable, Any, Optional, List
+import torch.nn as nn
+from torch.nn import functional as F
+from torch.autograd import Variable
+import math
+import numpy as np
+
+class MyTransformer(nn.Module):
+    def __init__(self):
+        super(MyTransformer, self).__init__()
+        self.d_k = 128
+        self.d_v = 128
+        self.d_model = 1280
+        self.d_ff = 2048
+        self.heads = 10
+        self.layer_normalization1 = nn.LayerNorm(1280)
+        self.layer_normalization2 = nn.LayerNorm(1280)
+        self.W_q = torch.nn.init.xavier_normal_(Variable(torch.randn(self.d_model, self.d_k).type(torch.cuda.FloatTensor), requires_grad=True))
+        self.W_k = torch.nn.init.xavier_normal_(Variable(torch.randn(self.d_model, self.d_k).type(torch.cuda.FloatTensor), requires_grad=True))
+        self.W_v = torch.nn.init.xavier_normal_(Variable(torch.randn(self.d_model, self.d_v).type(torch.cuda.FloatTensor), requires_grad=True))
+        self.W_o = torch.nn.init.xavier_normal_(Variable(torch.randn(self.heads*self.d_v, self.d_model).type(torch.cuda.FloatTensor), requires_grad=True))
+        self.fc1 = nn.Conv1d(self.d_model, self.d_ff,1)
+        self.activation = nn.GELU()
+        self.dropout = nn.Dropout(0.1)
+        self.fc2 = nn.Conv1d(self.d_ff, self.d_model,1)
+        self.classifier = nn.Sequential(self.fc1,self.activation,self.dropout,self.fc2)
+        nn.init.xavier_normal_(self.fc1.weight)
+        nn.init.constant_(self.fc1.bias, 0)
+        nn.init.xavier_normal_(self.fc2.weight)
+        nn.init.constant_(self.fc2.bias, 0)
 
 
-__all__ = ['MobileNetV2', 'mobilenet_v2']
+
+    def forward(self,frame):
+        frame_position = self.positionalencoding(frame.size(0))
+        frame2 = frame + frame_position
+        multi_head_output = self.temporal_attention(frame.squeeze(0))
+        transformer_output = self.MLP_head(multi_head_output)
+        return transformer_output
 
 
-model_urls = {
-    'mobilenet_v2': 'https://download.pytorch.org/models/mobilenet_v2-b0353104.pth',
-}
+    def temporal_attention(self,frame):
+        outputs = []
+        for i in range(self.heads):
+            Query = torch.mm(frame,self.W_q)
+            Key = torch.mm(frame,self.W_k)
+            Value = torch.mm(frame,self.W_v)
+
+            single_head_output = self.self_attention(Query,Key,Value)
+            outputs.append(single_head_output)
+        heads_concat_output = torch.cat(outputs,axis=1)
+
+        multi_head_output = torch.mm(heads_concat_output,self.W_o)
+        multi_head_output = multi_head_output + frame
+        multi_head_output = self.layer_normalization1(multi_head_output) #the error says "RuntimeError: expected scalar type Double but found Float" but actually works if I cast to float from double, bello    
+        
+        multi_head_output = torch.unsqueeze(multi_head_output,2)
+        return multi_head_output
 
 
-def _make_divisible(v: float, divisor: int, min_value: Optional[int] = None) -> int:
-    """
-    This function is taken from the original tf repo.
-    It ensures that all layers have a channel number that is divisible by 8
-    It can be seen here:
-    https://github.com/tensorflow/models/blob/master/research/slim/nets/mobilenet/mobilenet.py
-    """
-    if min_value is None:
-        min_value = divisor
-    new_v = max(min_value, int(v + divisor / 2) // divisor * divisor)
-    # Make sure that round down does not go down by more than 10%.
-    if new_v < 0.9 * v:
-        new_v += divisor
-    return new_v
+    def self_attention(self,Query,Key,Value):
+        Key_T = torch.transpose(Key,0,1)
+        Query_Key_T = torch.div(torch.matmul(Query,Key_T),math.sqrt(self.d_k))
+        attention = F.softmax(Query_Key_T,dim=-1)
+        self_attention_output = torch.matmul(attention,Value)
+        return self_attention_output
 
 
-class ConvBNActivation(nn.Sequential):
-    def __init__(
-        self,
-        in_planes: int,
-        out_planes: int,
-        kernel_size: int = 3,
-        stride: int = 1,
-        groups: int = 1,
-        norm_layer: Optional[Callable[..., nn.Module]] = None,
-        activation_layer: Optional[Callable[..., nn.Module]] = None,
-        dilation: int = 1,
-    ) -> None:
-        padding = (kernel_size - 1) // 2 * dilation
-        if norm_layer is None:
-            norm_layer = nn.BatchNorm2d
-        if activation_layer is None:
-            activation_layer = nn.ReLU6
-        super().__init__(
-            nn.Conv2d(in_planes, out_planes, kernel_size, stride, padding, dilation=dilation, groups=groups,
-                      bias=False),
-            norm_layer(out_planes),
-            activation_layer(inplace=True)
-        )
-        self.out_channels = out_planes
+    def MLP_head(self,multi_head_output):
+        out = self.classifier(multi_head_output)
+        out = out + multi_head_output
+    
+        out = self.layer_normalization2(out.squeeze(2))
+        out = torch.mean(out,0).view(-1) #not really sure if mean is the best thing, BERT and VTN use the CLS token
+        return out
+    
+    def get_angles(self,pos, i, d_model):
+        angle_rates = 1 / np.power(10000, (2 * (i//2)) / np.double(self.d_model))
+        return pos * angle_rates
 
-
-# necessary for backwards compatibility
-ConvBNReLU = ConvBNActivation
-
-
-class InvertedResidual(nn.Module):
-    def __init__(
-        self,
-        inp: int,
-        oup: int,
-        stride: int,
-        expand_ratio: int,
-        norm_layer: Optional[Callable[..., nn.Module]] = None
-    ) -> None:
-        super(InvertedResidual, self).__init__()
-        self.stride = stride
-        assert stride in [1, 2]
-
-        if norm_layer is None:
-            norm_layer = nn.BatchNorm2d
-
-        hidden_dim = int(round(inp * expand_ratio))
-        self.use_res_connect = self.stride == 1 and inp == oup
-
-        layers: List[nn.Module] = []
-        if expand_ratio != 1:
-            # pw
-            layers.append(ConvBNReLU(inp, hidden_dim, kernel_size=1, norm_layer=norm_layer))
-        layers.extend([
-            # dw
-            ConvBNReLU(hidden_dim, hidden_dim, stride=stride, groups=hidden_dim, norm_layer=norm_layer),
-            # pw-linear
-            nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
-            norm_layer(oup),
-        ])
-        self.conv = nn.Sequential(*layers)
-        self.out_channels = oup
-        self._is_cn = stride > 1
-
-    def forward(self, x: Tensor) -> Tensor:
-        if self.use_res_connect:
-            return x + self.conv(x)
-        else:
-            return self.conv(x)
-
-
-class MobileNetV2(nn.Module):
-    def __init__(
-        self,
-        num_classes: int = 1000,
-        width_mult: float = 1.0,
-        inverted_residual_setting: Optional[List[List[int]]] = None,
-        round_nearest: int = 8,
-        block: Optional[Callable[..., nn.Module]] = None,
-        norm_layer: Optional[Callable[..., nn.Module]] = None
-    ) -> None:
-        """
-        MobileNet V2 main class
-        Args:
-            num_classes (int): Number of classes
-            width_mult (float): Width multiplier - adjusts number of channels in each layer by this amount
-            inverted_residual_setting: Network structure
-            round_nearest (int): Round the number of channels in each layer to be a multiple of this number
-            Set to 1 to turn off rounding
-            block: Module specifying inverted residual building block for mobilenet
-            norm_layer: Module specifying the normalization layer to use
-        """
-        super(MobileNetV2, self).__init__()
-
-        if block is None:
-            block = InvertedResidual
-
-        if norm_layer is None:
-            norm_layer = nn.BatchNorm2d
-
-        input_channel = 32
-        last_channel = 1280
-
-        if inverted_residual_setting is None:
-            inverted_residual_setting = [
-                # t, c, n, s
-                [1, 16, 1, 1],
-                [6, 24, 2, 2],
-                [6, 32, 3, 2],
-                [6, 64, 4, 2],
-                [6, 96, 3, 1],
-                [6, 160, 3, 2],
-                [6, 320, 1, 1],
-            ]
-
-        # only check the first element, assuming user knows t,c,n,s are required
-        if len(inverted_residual_setting) == 0 or len(inverted_residual_setting[0]) != 4:
-            raise ValueError("inverted_residual_setting should be non-empty "
-                             "or a 4-element list, got {}".format(inverted_residual_setting))
-
-        # building first layer
-        input_channel = _make_divisible(input_channel * width_mult, round_nearest)
-        self.last_channel = _make_divisible(last_channel * max(1.0, width_mult), round_nearest)
-        features: List[nn.Module] = [ConvBNReLU(3, input_channel, stride=2, norm_layer=norm_layer)]
-        # building inverted residual blocks
-        for t, c, n, s in inverted_residual_setting:
-            output_channel = _make_divisible(c * width_mult, round_nearest)
-            for i in range(n):
-                stride = s if i == 0 else 1
-                features.append(block(input_channel, output_channel, stride, expand_ratio=t, norm_layer=norm_layer))
-                input_channel = output_channel
-        # building last several layers
-        features.append(ConvBNReLU(input_channel, self.last_channel, kernel_size=1, norm_layer=norm_layer))
-        # make it nn.Sequential
-        self.features = nn.Sequential(*features)
-
-        # building classifier
-        self.classifier = nn.Sequential(
-            nn.Dropout(0.2),
-            nn.Linear(self.last_channel, num_classes),
-        )
-
-        # weight initialization
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_out')
-                if m.bias is not None:
-                    nn.init.zeros_(m.bias)
-            elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
-                nn.init.ones_(m.weight)
-                nn.init.zeros_(m.bias)
-            elif isinstance(m, nn.Linear):
-                nn.init.normal_(m.weight, 0, 0.01)
-                nn.init.zeros_(m.bias)
-
-    def _forward_impl(self, x: Tensor) -> Tensor:
-        # This exists since TorchScript doesn't support inheritance, so the superclass method
-        # (this one) needs to have a name other than `forward` that can be accessed in a subclass
-        feats = self.features(x)
-        # Cannot use "squeeze" as batch-size can be 1
-        x = nn.functional.adaptive_avg_pool2d(feats, (1, 1))
-        x = torch.flatten(x, 1)
-        x = self.classifier(x)
-        return x, feats
-
-    def forward(self, x: Tensor) -> Tensor:
-        return self._forward_impl(x)
-
-
-def mobilenet_v2(pretrained: bool = False, progress: bool = True, **kwargs: Any) -> MobileNetV2:
-    """
-    Constructs a MobileNetV2 architecture from
-    `"MobileNetV2: Inverted Residuals and Linear Bottlenecks" <https://arxiv.org/abs/1801.04381>`_.
-    Args:
-        pretrained (bool): If True, returns a model pre-trained on ImageNet
-        progress (bool): If True, displays a progress bar of the download to stderr
-    """
-    model = MobileNetV2(**kwargs)
-    if pretrained:
-        state_dict = load_state_dict_from_url(model_urls['mobilenet_v2'],
-                                              progress=progress)
-        model.load_state_dict(state_dict)
-    return model
+    def positionalencoding(self,position):
+        # NOTE the code is from https://www.tensorflow.org/tutorials/text/transformer, not ours
+        angle_rads = self.get_angles(np.arange(position)[:, np.newaxis],np.arange(self.d_model)[np.newaxis, :],self.d_model)
+  
+        # apply sin to even indices in the array; 2i
+        angle_rads[:, 0::2] = np.sin(angle_rads[:, 0::2])
+  
+        # apply cos to odd indices in the array; 2i+1
+        angle_rads[:, 1::2] = np.cos(angle_rads[:, 1::2])
+    
+        pos_encoding = angle_rads[np.newaxis, ...]
+        pos_encoding = torch.tensor(pos_encoding).cuda()
+        return pos_encoding
