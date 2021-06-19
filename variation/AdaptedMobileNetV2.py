@@ -1,243 +1,214 @@
-from __future__ import print_function, division
-from transformerModel_CAM import *
-from spatial_transforms import (Compose, ToTensor, CenterCrop, Scale, Normalize, MultiScaleCornerCrop,
-                                RandomHorizontalFlip)
-from tensorboardX import SummaryWriter
-from makeDatasetRGB import *
-import argparse
-import sys
-
-DEVICE = "cuda"
-
-def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen, trainBatchSize,
-             valBatchSize, numEpochs, lr1, decay_factor, decay_step, memSize):
-    
-    train_usr = ["S1", "S3", "S4"]
-    val_usr = ["S2"]
-
-    num_classes = 61 # We are only using gtea61
-
-    model_folder = os.path.join('./', out_dir, 'rgb', '-stage'+str(stage))  # Dir for saving models and log files
-    # Create the dir
-    if os.path.exists(model_folder):
-        print('Directory {} exists!'.format(model_folder))
-        sys.exit()
-    os.makedirs(model_folder)
-
-    # Log files
-    writer = SummaryWriter(model_folder)
-    train_log_loss = open((model_folder + '/train_log_loss.txt'), 'w')
-    train_log_acc = open((model_folder + '/train_log_acc.txt'), 'w')
-    val_log_loss = open((model_folder + '/val_log_loss.txt'), 'w')
-    val_log_acc = open((model_folder + '/val_log_acc.txt'), 'w')
+import torch
+from torch import nn
+from torch import Tensor
+from torch.hub import load_state_dict_from_url
+from typing import Callable, Any, Optional, List
 
 
-    # Data loader
-    normalize = Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    spatial_transform = Compose([Scale(256), RandomHorizontalFlip(), MultiScaleCornerCrop([1, 0.875, 0.75, 0.65625], 224),
-                                 ToTensor(), normalize])
-    print(train_data_dir)
-
-    vid_seq_train = makeDataset(train_data_dir,train_usr, spatial_transform, seqLen, True)
-
-    train_loader = torch.utils.data.DataLoader(vid_seq_train, batch_size=trainBatchSize,
-                            shuffle=True, num_workers=2, pin_memory=True) #ok
-
-    #valuta
-    if val_data_dir is not None:
-
-        vid_seq_val = makeDataset(val_data_dir,val_usr, Compose([Scale(256), CenterCrop(224), ToTensor(), normalize]),seqLen,False)
-
-        val_loader = torch.utils.data.DataLoader(vid_seq_val, batch_size=valBatchSize,
-                                shuffle=False, num_workers=2, pin_memory=True)
-        valInstances = vid_seq_val.__len__()
-
-    train_params = []
-    if stage == 1:
-
-        model = selfAttentionModel(num_classes=num_classes, mem_size=memSize)
-        model.train(False)
-        for params in model.parameters():
-            params.requires_grad = False
-    #stage 2 : train anche per 
-    else:
-        model = selfAttentionModel(num_classes=num_classes, mem_size=memSize)
-        model.load_state_dict(torch.load(stage1_dict), strict=True)
-        model.train(False)
-    
-        for params in model.parameters():
-            params.requires_grad = False
-        
-        for params in model.mobileNet.parameters():
-            params.requires_grad = True
-            train_params += [params]
-        
-        model.mobileNet.train(True)
-        
-    #Train the weights' matrices in the transofmer
-    for params in model.transf.parameters():
-        params.requires_grad = True
-        train_params += [params]
-      
-    #Train the final classifier
-    for params in model.fc.parameters():
-        params.requires_grad = True
-        train_params += [params]    
-
-    model.transf.train(True)
-
-    model.fc.train(True)
-    
-    model.cuda()
+__all__ = ['MobileNetV2', 'mobilenet_v2']
 
 
-    loss_fn = nn.CrossEntropyLoss()
-
-    optimizer_fn = torch.optim.SGD(train_params, lr=1e-3, weight_decay=4e-5, momentum=0.9)
-
-    optim_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer_fn, 10)
-
-    train_iter = 0
-    min_accuracy = 0
-
-    for epoch in range(numEpochs):
-        
-        epoch_loss = 0
-        numCorrTrain = 0
-        trainSamples = 0
-        iterPerEpoch = 0
-        writer.add_scalar('lr', optimizer_fn.param_groups[0]['lr'], epoch+1)
-        model.mobileNet.train(True)
-        model.transf.train(True)
-        model.fc.train(True)
-        
-        for i, (inputs, targets) in enumerate(train_loader):
-            train_iter += 1
-            iterPerEpoch += 1
-            optimizer_fn.zero_grad()
-            input_frames = Variable(inputs.to(DEVICE))
-            ground_truth = Variable(targets.to(DEVICE))
-            trainSamples += inputs.size(0)
-
-            logits = model(input_frames)
-            loss = loss_fn(logits, ground_truth)
-            loss.backward()
-            optimizer_fn.step()
-            _, predicted = torch.max(logits.data, 1)
-            numCorrTrain += (predicted == targets.to(DEVICE)).sum()
-            epoch_loss += loss.item()
-          
-        optim_scheduler.step()
-        avg_loss = epoch_loss/iterPerEpoch
-        trainAccuracy = (numCorrTrain.data.item() / trainSamples)
-
-        print('Train: Epoch = {} | Loss = {} | Accuracy = {}'.format(epoch+1, avg_loss, trainAccuracy))
-        writer.add_scalar('train/epoch_loss', avg_loss, epoch+1) # log del train
-        writer.add_scalar('train/accuracy', trainAccuracy, epoch+1)
-        train_log_loss.write('Val Loss after {} epochs = {}\n'.format(epoch + 1, avg_loss))
-        train_log_acc.write('Val Accuracy after {} epochs = {}%\n'.format(epoch + 1, trainAccuracy))
-
-        if val_data_dir is not None:
-            if (epoch+1) % 1 == 0:
-                model.train(False)
-                val_loss_epoch = 0
-                val_iter = 0
-                val_samples = 0
-                numCorr = 0
-                for j, (inputs, targets) in enumerate(val_loader):
-                    val_iter += 1
-                    val_samples += inputs.size(0)
-                    inputVariable = Variable(inputs.to(DEVICE))
-                    labelVariable = Variable(targets.to(DEVICE))
-                    with torch.no_grad():
-                      output_label = model(inputVariable)
-                      val_loss = loss_fn(output_label, labelVariable)
-                      val_loss_epoch += val_loss.item()
-                    _, predicted = torch.max(output_label.data, 1)
-                    numCorr += (predicted == targets.to(DEVICE)).sum()
-                val_accuracy = (numCorr / val_samples)
-                avg_val_loss = val_loss_epoch / val_iter
-                print('Val: Epoch = {} | Loss {} | Accuracy = {}'.format(epoch + 1, avg_val_loss, val_accuracy))
-                writer.add_scalar('val/epoch_loss', avg_val_loss, epoch + 1)
-                writer.add_scalar('val/accuracy', val_accuracy, epoch + 1)
-                val_log_loss.write('Val Loss after {} epochs = {}\n'.format(epoch + 1, avg_val_loss))
-                val_log_acc.write('Val Accuracy after {} epochs = {}%\n'.format(epoch + 1, val_accuracy))
-                if val_accuracy > min_accuracy:
-                    save_path_model = (model_folder + '/model_rgb_state_dict.pth')
-                    torch.save(model.state_dict(), save_path_model)
-                    min_accuracy = val_accuracy
-            else:
-                if (epoch+1) % 10 == 0:
-                    save_path_model = (model_folder + '/model_rgb_state_dict_epoch' + str(epoch+1) + '.pth')
-                    torch.save(model.state_dict(), save_path_model)
-    
-    train_log_loss.close()
-    train_log_acc.close()
-    val_log_acc.close()
-    val_log_loss.close()
-    writer.export_scalars_to_json(model_folder + "/all_scalars.json")
-    writer.close()
+model_urls = {
+    'mobilenet_v2': 'https://download.pytorch.org/models/mobilenet_v2-b0353104.pth',
+}
 
 
-def __main__():
-    stage = 1
-    trainDatasetDir = './GTEA61'
-    valDatasetDir = './GTEA61'
-    stage1Dict = None
-    outDir = 'results_stage1' # label for folder name
-    seqLen = 16 # number of frames
-    trainBatchSize = 32 # bnumber of training samples to work through before the model’s internal parameters are update
-    valBatchSize = 32  # da valutare se 32 o 64
-    numEpochs = 50 # 7 frame dovrebbe essere veloce
-    lr1 = 1e-3 #defauld Learning rate
-    decayRate = 0.1 #Learning rate decay rate
-    stepSize = [25]
-    memSize = 512 #ConvLSTM hidden state size
+def _make_divisible(v: float, divisor: int, min_value: Optional[int] = None) -> int:
+    """
+    This function is taken from the original tf repo.
+    It ensures that all layers have a channel number that is divisible by 8
+    It can be seen here:
+    https://github.com/tensorflow/models/blob/master/research/slim/nets/mobilenet/mobilenet.py
+    """
+    if min_value is None:
+        min_value = divisor
+    new_v = max(min_value, int(v + divisor / 2) // divisor * divisor)
+    # Make sure that round down does not go down by more than 10%.
+    if new_v < 0.9 * v:
+        new_v += divisor
+    return new_v
 
 
-#Stage 1
-    main_run(stage,
-            trainDatasetDir,
-            valDatasetDir,
-            stage1Dict,
-            outDir,
-            seqLen, 
-            trainBatchSize,
-            valBatchSize,
-            numEpochs, 
-            lr1, 
-            decayRate, 
-            stepSize,
-            memSize)    
-
-    stage = 2
-    trainDatasetDir = './GTEA61'
-    valDatasetDir = './GTEA61'
-    stage1Dict = './results_stage1/rgb/-stage1/model_rgb_state_dict.pth'
-    outDir = 'results_stage2' # label for folder name
-    seqLen = 16 # number of frames
-    trainBatchSize = 32 # bnumber of training samples to work through before the model’s internal parameters are update
-    valBatchSize = 32  # da valutare se 32 o 64
-    numEpochs = 150 # 7 frame dovrebbe essere veloce
-    lr1 = 1e-4 #defauld Learning rate
-    decayRate = 0.1 #Learning rate decay rate
-    stepSize = [25,75]
-    memSize = 512 #ConvLSTM hidden state size
+class ConvBNActivation(nn.Sequential):
+    def __init__(
+        self,
+        in_planes: int,
+        out_planes: int,
+        kernel_size: int = 3,
+        stride: int = 1,
+        groups: int = 1,
+        norm_layer: Optional[Callable[..., nn.Module]] = None,
+        activation_layer: Optional[Callable[..., nn.Module]] = None,
+        dilation: int = 1,
+    ) -> None:
+        padding = (kernel_size - 1) // 2 * dilation
+        if norm_layer is None:
+            norm_layer = nn.BatchNorm2d
+        if activation_layer is None:
+            activation_layer = nn.ReLU6
+        super().__init__(
+            nn.Conv2d(in_planes, out_planes, kernel_size, stride, padding, dilation=dilation, groups=groups,
+                      bias=False),
+            norm_layer(out_planes),
+            activation_layer(inplace=True)
+        )
+        self.out_channels = out_planes
 
 
-#Stage 2
-    main_run(stage,
-            trainDatasetDir,
-            valDatasetDir,
-            stage1Dict,
-            outDir,
-            seqLen, 
-            trainBatchSize,
-            valBatchSize,
-            numEpochs, 
-            lr1, 
-            decayRate, 
-            stepSize,
-            memSize)
+# necessary for backwards compatibility
+ConvBNReLU = ConvBNActivation
 
-__main__()
+
+class InvertedResidual(nn.Module):
+    def __init__(
+        self,
+        inp: int,
+        oup: int,
+        stride: int,
+        expand_ratio: int,
+        norm_layer: Optional[Callable[..., nn.Module]] = None
+    ) -> None:
+        super(InvertedResidual, self).__init__()
+        self.stride = stride
+        assert stride in [1, 2]
+
+        if norm_layer is None:
+            norm_layer = nn.BatchNorm2d
+
+        hidden_dim = int(round(inp * expand_ratio))
+        self.use_res_connect = self.stride == 1 and inp == oup
+
+        layers: List[nn.Module] = []
+        if expand_ratio != 1:
+            # pw
+            layers.append(ConvBNReLU(inp, hidden_dim, kernel_size=1, norm_layer=norm_layer))
+        layers.extend([
+            # dw
+            ConvBNReLU(hidden_dim, hidden_dim, stride=stride, groups=hidden_dim, norm_layer=norm_layer),
+            # pw-linear
+            nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
+            norm_layer(oup),
+        ])
+        self.conv = nn.Sequential(*layers)
+        self.out_channels = oup
+        self._is_cn = stride > 1
+
+    def forward(self, x: Tensor) -> Tensor:
+        if self.use_res_connect:
+            return x + self.conv(x)
+        else:
+            return self.conv(x)
+
+
+class MobileNetV2(nn.Module):
+    def __init__(
+        self,
+        num_classes: int = 1000,
+        width_mult: float = 1.0,
+        inverted_residual_setting: Optional[List[List[int]]] = None,
+        round_nearest: int = 8,
+        block: Optional[Callable[..., nn.Module]] = None,
+        norm_layer: Optional[Callable[..., nn.Module]] = None
+    ) -> None:
+        """
+        MobileNet V2 main class
+        Args:
+            num_classes (int): Number of classes
+            width_mult (float): Width multiplier - adjusts number of channels in each layer by this amount
+            inverted_residual_setting: Network structure
+            round_nearest (int): Round the number of channels in each layer to be a multiple of this number
+            Set to 1 to turn off rounding
+            block: Module specifying inverted residual building block for mobilenet
+            norm_layer: Module specifying the normalization layer to use
+        """
+        super(MobileNetV2, self).__init__()
+
+        if block is None:
+            block = InvertedResidual
+
+        if norm_layer is None:
+            norm_layer = nn.BatchNorm2d
+
+        input_channel = 32
+        last_channel = 1280
+
+        if inverted_residual_setting is None:
+            inverted_residual_setting = [
+                # t, c, n, s
+                [1, 16, 1, 1],
+                [6, 24, 2, 2],
+                [6, 32, 3, 2],
+                [6, 64, 4, 2],
+                [6, 96, 3, 1],
+                [6, 160, 3, 2],
+                [6, 320, 1, 1],
+            ]
+
+        # only check the first element, assuming user knows t,c,n,s are required
+        if len(inverted_residual_setting) == 0 or len(inverted_residual_setting[0]) != 4:
+            raise ValueError("inverted_residual_setting should be non-empty "
+                             "or a 4-element list, got {}".format(inverted_residual_setting))
+
+        # building first layer
+        input_channel = _make_divisible(input_channel * width_mult, round_nearest)
+        self.last_channel = _make_divisible(last_channel * max(1.0, width_mult), round_nearest)
+        features: List[nn.Module] = [ConvBNReLU(3, input_channel, stride=2, norm_layer=norm_layer)]
+        # building inverted residual blocks
+        for t, c, n, s in inverted_residual_setting:
+            output_channel = _make_divisible(c * width_mult, round_nearest)
+            for i in range(n):
+                stride = s if i == 0 else 1
+                features.append(block(input_channel, output_channel, stride, expand_ratio=t, norm_layer=norm_layer))
+                input_channel = output_channel
+        # building last several layers
+        features.append(ConvBNReLU(input_channel, self.last_channel, kernel_size=1, norm_layer=norm_layer))
+        # make it nn.Sequential
+        self.features = nn.Sequential(*features)
+
+        # building classifier
+        self.classifier = nn.Sequential(
+            nn.Dropout(0.2),
+            nn.Linear(self.last_channel, num_classes),
+        )
+
+        # weight initialization
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out')
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
+            elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
+                nn.init.ones_(m.weight)
+                nn.init.zeros_(m.bias)
+            elif isinstance(m, nn.Linear):
+                nn.init.normal_(m.weight, 0, 0.01)
+                nn.init.zeros_(m.bias)
+
+    def _forward_impl(self, x: Tensor) -> Tensor:
+        # This exists since TorchScript doesn't support inheritance, so the superclass method
+        # (this one) needs to have a name other than `forward` that can be accessed in a subclass
+        feats = self.features(x)
+        # Cannot use "squeeze" as batch-size can be 1
+        x = nn.functional.adaptive_avg_pool2d(feats, (1, 1))
+        x = torch.flatten(x, 1)
+        x = self.classifier(x)
+        return x, feats
+
+    def forward(self, x: Tensor) -> Tensor:
+        return self._forward_impl(x)
+
+
+def mobilenet_v2(pretrained: bool = False, progress: bool = True, **kwargs: Any) -> MobileNetV2:
+    """
+    Constructs a MobileNetV2 architecture from
+    `"MobileNetV2: Inverted Residuals and Linear Bottlenecks" <https://arxiv.org/abs/1801.04381>`_.
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+        progress (bool): If True, displays a progress bar of the download to stderr
+    """
+    model = MobileNetV2(**kwargs)
+    if pretrained:
+        state_dict = load_state_dict_from_url(model_urls['mobilenet_v2'],
+                                              progress=progress)
+        model.load_state_dict(state_dict)
+    return model
