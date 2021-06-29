@@ -13,7 +13,7 @@ class MyTransformer(nn.Module):
         self.d_model = 512
         self.d_ff = 2048
         self.heads = 8
-        self.num_frames = 0
+        self.num_frames = 16
         self.batch_size = 0
         self.layer_normalization1 = nn.LayerNorm(512)
         self.layer_normalization2 = nn.LayerNorm(512)
@@ -35,7 +35,6 @@ class MyTransformer(nn.Module):
 
     def forward(self,frame):
         self.batch_size = frame.size(0)
-        self.num_frames = frame.size(1)
         frame_position = self.positionalencoding(frame.size(1))
         frame2 = frame + frame_position
         multi_head_output = self.temporal_attention(frame.squeeze(0))
