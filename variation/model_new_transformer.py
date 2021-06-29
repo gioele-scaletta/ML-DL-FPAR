@@ -29,11 +29,12 @@ class selfAttentionModel(nn.Module):
         logits = []
         feats_ss = []
         embeddings = []
-        for t in range(inputVariable.size(0)):
-        bz, nf, nc_rgb, h, w = feature_conv.size()
+        bz, nf, nc_rgb, h, w = inputVariable.size()
+        print("input variable: ",inputVariable.size())
         inputVariable = inputVariable.view(-1,nc_rgb,h,w)
         logit, feature_conv, feature_convNBN = self.resNet(inputVariable)
         bz_nf, nc_resnet, h, w = feature_conv.size()    #bz = batch size    #nc = number of channels    #h = height   #w = width
+        print("feature conv", feature_conv.size())
         feature_conv1 = feature_conv.view(bz_nf, nc_resnet, h*w)    #make vector from matrix (hxw -> h*w)
         probs, idxs = logit.sort(1, True)   #sort in order from highest to lowest the score of each class in each batch
         class_idx = idxs[:, 0]    
@@ -41,8 +42,7 @@ class selfAttentionModel(nn.Module):
         attentionMAP = F.softmax(cam.squeeze(1), dim=1)
         attentionMAP = attentionMAP.view(attentionMAP.size(0), 1, 7, 7)
         attentionFeat = feature_convNBN * attentionMAP.expand_as(feature_conv)
-
-            #transformer
+        print("attention feat:",attentionFeat.size())
         embeddings = torch.squeeze(torch.squeeze(self.avgpool(attentionFeat),3),2)
         embeddings = embeddings.view(bz,nf,-1)
         logit = self.transf(embeddings)
