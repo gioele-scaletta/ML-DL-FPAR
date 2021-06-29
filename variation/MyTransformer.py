@@ -6,14 +6,14 @@ import math
 import numpy as np
 
 class MyTransformer(nn.Module):
-    def __init__(self):
+    def __init__(self, num_frames):
         super(MyTransformer, self).__init__()
         self.d_k = 64
         self.d_v = 64
         self.d_model = 512
         self.d_ff = 2048
         self.heads = 8
-        self.num_frames = 16
+        self.num_frames = num_frames
         self.batch_size = 0
         self.layer_normalization1 = nn.LayerNorm(512)
         self.layer_normalization2 = nn.LayerNorm(512)
