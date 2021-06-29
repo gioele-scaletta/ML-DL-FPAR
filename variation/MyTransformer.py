@@ -76,11 +76,11 @@ class MyTransformer(nn.Module):
     def MLP_head(self,multi_head_output):
         print("multihead", multi_head_output.size())
         out = self.classifier(multi_head_output.squeeze(2).view(32,-1))
+        out = out.view(32,-1,self.d_model) + multi_head_output.squeeze(2)
+        print("out size: ",out.size())    
+        out = self.layer_normalization2(out)
+        out = torch.mean(out,1).view(32,-1) #not really sure if mean is the best thing, BERT and VTN use the CLS token
         print("out size: ",out.size())
-        out = out + multi_head_output
-    
-        out = self.layer_normalization2(out.squeeze(2))
-        out = torch.mean(out,0).view(-1) #not really sure if mean is the best thing, BERT and VTN use the CLS token
         return out
     
     def get_angles(self,pos, i, d_model):
