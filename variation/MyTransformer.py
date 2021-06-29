@@ -13,16 +13,18 @@ class MyTransformer(nn.Module):
         self.d_model = 512
         self.d_ff = 2048
         self.heads = 8
+        self.num_frames = 0
+        self.batch_size = 0
         self.layer_normalization1 = nn.LayerNorm(512)
         self.layer_normalization2 = nn.LayerNorm(512)
         self.W_q = torch.nn.init.xavier_normal_(Variable(torch.randn(self.d_model, self.d_k).type(torch.cuda.FloatTensor), requires_grad=True))
         self.W_k = torch.nn.init.xavier_normal_(Variable(torch.randn(self.d_model, self.d_k).type(torch.cuda.FloatTensor), requires_grad=True))
         self.W_v = torch.nn.init.xavier_normal_(Variable(torch.randn(self.d_model, self.d_v).type(torch.cuda.FloatTensor), requires_grad=True))
         self.W_o = torch.nn.init.xavier_normal_(Variable(torch.randn(self.heads*self.d_v, self.d_model).type(torch.cuda.FloatTensor), requires_grad=True))
-        self.fc1 = nn.Linear(8192, self.d_ff,1)
+        self.fc1 = nn.Linear(self.d_model*self.num_frames, self.d_ff,1)
         self.activation = nn.GELU()
         self.dropout = nn.Dropout(0.1)
-        self.fc2 = nn.Linear(self.d_ff, 8192,1)
+        self.fc2 = nn.Linear(self.d_ff, self.d_model*self.num_frames,1)
         self.classifier = nn.Sequential(self.fc1,self.activation,self.dropout,self.fc2)
         nn.init.xavier_normal_(self.fc1.weight)
         nn.init.constant_(self.fc1.bias, 0)
@@ -32,9 +34,9 @@ class MyTransformer(nn.Module):
 
 
     def forward(self,frame):
+        self.batch_size = frame.size(0)
+        self.num_frames = frame.size(1)
         frame_position = self.positionalencoding(frame.size(1))
-        print(frame.size())
-        print(frame_position.size())
         frame2 = frame + frame_position
         multi_head_output = self.temporal_attention(frame.squeeze(0))
         transformer_output = self.MLP_head(multi_head_output)
@@ -53,10 +55,8 @@ class MyTransformer(nn.Module):
                 single_head_output = self.self_attention(Query,Key,Value)
                 batch_outputs.append(single_head_output)
             heads_concat_output = torch.cat(batch_outputs,axis=1)
-            #print("heads out", heads_concat_output.size())
             outputs.append(heads_concat_output)
         outputs = torch.stack(outputs,dim=0)
-        print("ouputs size",outputs.size())
         multi_head_output = torch.mm(heads_concat_output,self.W_o)
         multi_head_output = multi_head_output + frame
         multi_head_output = self.layer_normalization1(multi_head_output) #the error says "RuntimeError: expected scalar type Double but found Float" but actually works if I cast to float from double, bello    
@@ -74,13 +74,10 @@ class MyTransformer(nn.Module):
 
 
     def MLP_head(self,multi_head_output):
-        print("multihead", multi_head_output.size())
-        out = self.classifier(multi_head_output.squeeze(2).view(32,-1))
-        out = out.view(32,-1,self.d_model) + multi_head_output.squeeze(2)
-        print("out size: ",out.size())    
+        out = self.classifier(multi_head_output.squeeze(2).view(self.batch_size,-1))
+        out = out.view(self.batch_size,-1,self.d_model) + multi_head_output.squeeze(2)
         out = self.layer_normalization2(out)
-        out = torch.mean(out,1).view(32,-1) #not really sure if mean is the best thing, BERT and VTN use the CLS token
-        print("out size: ",out.size())
+        out = torch.mean(out,1).view(self.batch_size,-1) #not really sure if mean is the best thing, BERT and VTN use the CLS token
         return out
     
     def get_angles(self,pos, i, d_model):
