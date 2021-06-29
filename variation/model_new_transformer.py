@@ -46,14 +46,12 @@ class selfAttentionModel(nn.Module):
         embeddings = torch.squeeze(torch.squeeze(self.avgpool(attentionFeat),3),2)
         embeddings = embeddings.view(bz,nf,-1)
         logit = self.transf(embeddings)
+        print("logit",logit.size())
         final_logit = self.fc(logit.cuda())
+        print("final logit",final_logit.size())
         ss_task_feats = self.ss_task(feature_conv) # a tensor of size [32,7*7] is returned
-        ss_task_feats = ss_task_feats.view(feature_conv.size(0), 7*7) #now that it is a regression problem no more 2 and no more softmax needed
-        feats_ss.append(ss_task_feats)
-
-
-        feats_ss = torch.stack(feats_ss,0)
-        feats_ss = feats_ss.permute(1,0,2)        
-        feats_ss = feats_ss.view(bz, inputVariable.size(0), 7*7)
-        logits = torch.stack(logits,axis=0).squeeze(1)
-        return logits, feats_ss
+        print("ss task feats",ss_task_feats.size())
+        feats_ss = ss_task_feats.view(bz, nf, 7*7) #now that it is a regression problem no more 2 and no more softmax needed
+        print("feats self super", feats_ss.size())
+        print("_"*50)
+        return final_logit, feats_ss
