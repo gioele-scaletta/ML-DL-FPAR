@@ -8,14 +8,14 @@ from MyTransformer2 import *
 from ss_task import *
 
 class selfAttentionModel(nn.Module):
-    def __init__(self, num_classes=61, mem_size=512):
+    def __init__(self, num_classes=61, mem_size=512, num_frames=16):
         super(selfAttentionModel, self).__init__()
         self.num_classes = num_classes
         self.resNet = resnetMod.resnet34(True, True)
         self.mem_size = mem_size
         self.ss_task = ss_task()
         self.weight_softmax = self.resNet.fc.weight
-        self.transf = MyTransformer()
+        self.transf = MyTransformer(num_frames)
         self.avgpool = nn.AvgPool2d(7)
         self.dropout = nn.Dropout(0.7)
         self.conv_f = nn.Conv1d(512, 61, kernel_size=1, stride=1)
