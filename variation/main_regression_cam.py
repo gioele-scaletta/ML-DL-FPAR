@@ -54,7 +54,7 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
 
     train_params = []
     if stage == 1:
-        model = selfAttentionModel(num_classes=num_classes, mem_size=memSize)
+        model = selfAttentionModel(num_classes=num_classes, mem_size=memSize, num_frames=seqLen)
         model.train(False)
         for params in model.parameters():
             params.requires_grad = False
