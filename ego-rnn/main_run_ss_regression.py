@@ -44,7 +44,7 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
     vid_seq_train = makeDataset(train_data_dir,train_usr, spatial_transform, seqLen, True)
 
     train_loader = torch.utils.data.DataLoader(vid_seq_train, batch_size=trainBatchSize,
-                            shuffle=True, num_workers=2, pin_memory=True, ) #ok
+                            shuffle=True, num_workers=2, pin_memory=False) 
 
     #valuta
     if val_data_dir is not None:
@@ -52,7 +52,7 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
         vid_seq_val = makeDataset(val_data_dir,val_usr, Compose([Scale(256), CenterCrop(224), ToTensor(), normalize]),seqLen,False)
 
         val_loader = torch.utils.data.DataLoader(vid_seq_val, batch_size=valBatchSize,
-                                shuffle=False, num_workers=2, pin_memory=True)
+                                shuffle=False, num_workers=2, pin_memory=False)
         valInstances = vid_seq_val.__len__()
 
     train_params = []
@@ -100,11 +100,7 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
             params.requires_grad = True
             train_params += [params]
 
-        for params in model.ss_task.fc.parameters():
-            params.requires_grad = True
-            train_params += [params]
-
-        for params in model.ss_task.conv.parameters():
+        for params in model.ss_task.parameters():
             params.requires_grad = True
             train_params += [params]
 
@@ -115,8 +111,8 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
         model.resNet.layer4[2].conv1.train(True)
         model.resNet.layer4[2].conv2.train(True)
         model.resNet.fc.train(True)
-        model.ss_task.conv.train(True)
-        model.ss_task.fc.train(True)
+        model.ss_task.train(True)
+        
 
     #Train LSTM 
     for params in model.lstm_cell.parameters():
@@ -129,7 +125,6 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
 
 
     model.lstm_cell.train(True)
-
     model.classifier.train(True)
     model.cuda()
 
@@ -266,7 +261,7 @@ def __main__():
     numEpochs = 200 # 7 frame dovrebbe essere veloce
     lr1 = 1e-3 #defauld Learning rate
     decayRate = 0.1 #Learning rate decay rate
-    stepSize = [25,75,150]
+    stepSize = [25,100,150]
     memSize = 512 #ConvLSTM hidden state size
 
 
