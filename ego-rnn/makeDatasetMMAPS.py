@@ -65,7 +65,7 @@ class makeDataset(Dataset):
                 try:
                   fm_name = vid_nameM + '/' + 'map' + str(int(np.floor(j))).zfill(4) + self.fmt
                   img = Image.open(fm_name)
-                  inpSeqM.append(self.spatial_transform(img, inv=False, flow=True))
+                  inpSeqM.append(self.spatial_transform(img.convert('L'), flow=True))
                   fl_name = vid_nameF + '/' + 'rgb' + str(int(np.floor(j))).zfill(4) + self.fmt
                   img = Image.open(fl_name)
                   inpSeq.append(self.spatial_transform(img.convert('RGB')))
