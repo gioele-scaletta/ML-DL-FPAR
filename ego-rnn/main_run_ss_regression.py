@@ -151,9 +151,9 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
         numCorrTrain = 0
         trainSamples = 0
         iterPerEpoch = 0
+        writer.add_scalar('lr', optimizer_fn.param_groups[0]['lr'], epoch+1)
         model.lstm_cell.train(True)
         model.classifier.train(True)
-        writer.add_scalar('lr', optimizer_fn.param_groups[0]['lr'], epoch+1)
         if stage == 2:
             model.resNet.layer4[0].conv1.train(True)
             model.resNet.layer4[0].conv2.train(True)
@@ -162,8 +162,7 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
             model.resNet.layer4[2].conv1.train(True)
             model.resNet.layer4[2].conv2.train(True)
             model.resNet.fc.train(True)
-            model.ss_task.conv.train(True)
-            model.ss_task.fc.train(True)
+            model.ss_task.train(True)
         for i, (inputs, inputs_MMAPS, targets) in enumerate(train_loader):
             train_iter += 1
             iterPerEpoch += 1
