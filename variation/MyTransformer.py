@@ -15,8 +15,6 @@ class MyTransformer(nn.Module):
         self.heads = 8
         self.num_frames = num_frames
         self.batch_size = 0
-        self.layer_normalization1 = nn.LayerNorm(512)
-        self.layer_normalization2 = nn.LayerNorm(512)
         self.W_q = torch.nn.init.xavier_normal_(Variable(torch.randn(self.d_model, self.d_k).type(torch.cuda.FloatTensor), requires_grad=True))
         self.W_k = torch.nn.init.xavier_normal_(Variable(torch.randn(self.d_model, self.d_k).type(torch.cuda.FloatTensor), requires_grad=True))
         self.W_v = torch.nn.init.xavier_normal_(Variable(torch.randn(self.d_model, self.d_v).type(torch.cuda.FloatTensor), requires_grad=True))
@@ -58,7 +56,8 @@ class MyTransformer(nn.Module):
         outputs = torch.stack(outputs,dim=0)
         multi_head_output = torch.mm(heads_concat_output,self.W_o)
         multi_head_output = multi_head_output + frame
-        multi_head_output = self.layer_normalization1(multi_head_output) #the error says "RuntimeError: expected scalar type Double but found Float" but actually works if I cast to float from double, bello    
+        layer_normalization1 = nn.LayerNorm(multi_head_output.size()[1:], elementwise_affine=False)
+        multi_head_output = layer_normalization1(multi_head_output) #the error says "RuntimeError: expected scalar type Double but found Float" but actually works if I cast to float from double, bello    
         
         multi_head_output = torch.unsqueeze(multi_head_output,2)
         return multi_head_output
@@ -75,7 +74,8 @@ class MyTransformer(nn.Module):
     def MLP_head(self,multi_head_output):
         out = self.classifier(multi_head_output.squeeze(2).view(self.batch_size,-1))
         out = out.view(self.batch_size,-1,self.d_model) + multi_head_output.squeeze(2)
-        out = self.layer_normalization2(out)
+        layer_normalization2 = nn.LayerNorm(out.size()[1:], elementwise_affine=False)
+        out = layer_normalization2(out)
         out = torch.mean(out,1).view(self.batch_size,-1) #not really sure if mean is the best thing, BERT and VTN use the CLS token
         return out
     
