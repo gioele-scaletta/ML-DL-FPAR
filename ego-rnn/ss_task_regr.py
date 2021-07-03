@@ -9,7 +9,7 @@ def conv1x1(in_planes, out_planes, kernel_size=1, stride=1, padding=0):
 class ss_task(nn.Module):
     def __init__(self):
         super(ss_task, self).__init__()
-        self.conv = conv1x1(in_planes=512, out_planes=100, kernel_size=1, stride=1, padding=0)
+        self.conv = nn.Conv2d(in_channels=512, out_channels=100, kernel_size=1, stride=1, padding=0, bias=False)
         self.fc = nn.Linear(100*7*7,  7*7)
         nn.init.xavier_normal_(self.fc.weight)
         nn.init.constant_(self.fc.bias, 0)
