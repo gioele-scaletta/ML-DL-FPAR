@@ -1,5 +1,5 @@
 from __future__ import print_function, division
-from transformerModel import *
+from model_new_transformer import *
 from spatial_transforms import (Compose, ToTensor, CenterCrop, Scale, Normalize, MultiScaleCornerCrop,
                                 RandomHorizontalFlip)
 from tensorboardX import SummaryWriter
@@ -55,13 +55,13 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
     train_params = []
     if stage == 1:
 
-        model = selfAttentionModel(num_classes=num_classes, mem_size=memSize)
+        model = selfAttentionModel(num_classes=num_classes, mem_size=memSize, num_frames=seqLen)
         model.train(False)
         for params in model.parameters():
             params.requires_grad = False
     #stage 2 : train anche per 
     else:
-        model = selfAttentionModel(num_classes=num_classes, mem_size=memSize)
+        model = selfAttentionModel(num_classes=num_classes, mem_size=memSize, num_frames=seqLen)
         model.load_state_dict(torch.load(stage1_dict), strict=True)
         model.train(False)
     
@@ -95,8 +95,6 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
         for params in model.resNet.fc.parameters():
             params.requires_grad = True
             train_params += [params]
-            
-
         
         model.resNet.layer4[0].conv1.train(True)
         model.resNet.layer4[0].conv2.train(True)
@@ -117,7 +115,6 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
         train_params += [params]    
 
     model.transf.train(True)
-
     model.fc.train(True)
     
     model.cuda()
@@ -140,13 +137,14 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
         trainSamples = 0
         iterPerEpoch = 0
         writer.add_scalar('lr', optimizer_fn.param_groups[0]['lr'], epoch+1)
-        model.resNet.layer4[0].conv1.train(True)
-        model.resNet.layer4[0].conv2.train(True)
-        model.resNet.layer4[1].conv1.train(True)
-        model.resNet.layer4[1].conv2.train(True)
-        model.resNet.layer4[2].conv1.train(True)
-        model.resNet.layer4[2].conv2.train(True)
-        model.resNet.fc.train(True)
+        if stage==2:
+            model.resNet.layer4[0].conv1.train(True)
+            model.resNet.layer4[0].conv2.train(True)
+            model.resNet.layer4[1].conv1.train(True)
+            model.resNet.layer4[1].conv2.train(True)
+            model.resNet.layer4[2].conv1.train(True)
+            model.resNet.layer4[2].conv2.train(True)
+            model.resNet.fc.train(True)
         model.transf.train(True)
         model.fc.train(True)
         
@@ -159,6 +157,7 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
             trainSamples += inputs.size(0)
 
             logits = model(input_frames)
+            #print(logits.size())
             loss = loss_fn(logits, ground_truth)
             loss.backward()
             optimizer_fn.step()
@@ -224,10 +223,10 @@ def __main__():
     valDatasetDir = './GTEA61'
     stage1Dict = None
     outDir = 'results_stage1' # label for folder name
-    seqLen = 16 # number of frames
+    seqLen = 7 # number of frames
     trainBatchSize = 32 # bnumber of training samples to work through before the model’s internal parameters are update
     valBatchSize = 32  # da valutare se 32 o 64
-    numEpochs = 50 # 7 frame dovrebbe essere veloce
+    numEpochs = 200 # 7 frame dovrebbe essere veloce
     lr1 = 1e-3 #defauld Learning rate
     decayRate = 0.1 #Learning rate decay rate
     stepSize = [25]
@@ -254,7 +253,7 @@ def __main__():
     valDatasetDir = './GTEA61'
     stage1Dict = './results_stage1/rgb/-stage1/model_rgb_state_dict.pth'
     outDir = 'results_stage2' # label for folder name
-    seqLen = 16 # number of frames
+    seqLen = 7 # number of frames
     trainBatchSize = 32 # bnumber of training samples to work through before the model’s internal parameters are update
     valBatchSize = 32  # da valutare se 32 o 64
     numEpochs = 150 # 7 frame dovrebbe essere veloce
