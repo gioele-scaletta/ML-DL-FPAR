@@ -8,11 +8,11 @@ import numpy as np
 class MyTransformer(nn.Module):
     def __init__(self, num_frames):
         super(MyTransformer, self).__init__()
-        self.d_k = 64
-        self.d_v = 64
-        self.d_model = 512
+        self.d_k = 61
+        self.d_v = 61
+        self.d_model = 610
         self.d_ff = 2048
-        self.heads = 8
+        self.heads = 10
         self.num_frames = num_frames
         self.batch_size = 0
         self.W_q = torch.nn.init.xavier_normal_(Variable(torch.randn(self.d_model, self.d_k).type(torch.cuda.FloatTensor), requires_grad=True))
