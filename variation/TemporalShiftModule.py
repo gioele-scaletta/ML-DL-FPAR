@@ -9,7 +9,7 @@ def TSM(input, n_frames, fold_div):
     batch_size = n // n_frames
     input = input.view(batch_size, n_frames, c, h, w)
     fold = c // fold_div
-    out = torch.zeros_like(x)
+    out = torch.zeros_like(input)
     out[:, :-1, :fold] = x[:, 1:, :fold]  # shift left
     out[:, 1:, fold: 2 * fold] = x[:, :-1, fold: 2 * fold]  # shift right
     out[:, :, 2 * fold:] = x[:, :, 2 * fold:]  # not shift
