@@ -42,7 +42,7 @@ class selfAttentionModel(nn.Module):
         #print(attentionMAP.size())
         attentionMAP = attentionMAP.view(bz,nf, -1)
         #attentionFeat = feature_convNBN * attentionMAP.expand_as(feature_conv)
-        embeddings = torch.squeeze(torch.squeeze(self.avgpool(feature_convNBN),3),2)
+        embeddings = torch.squeeze(torch.squeeze(self.avgpool(feature_convNBN),3),2) # also have to try max pooling
         embeddings = embeddings.view(bz,nf,-1)
         ss_task_feats = self.ss_task(feature_conv) # a tensor of size [32,7*7] is returned
         feats_ss = ss_task_feats.view(bz, nf, 7*7) #now that it is a regression problem no more 2 and no more softmax needed
