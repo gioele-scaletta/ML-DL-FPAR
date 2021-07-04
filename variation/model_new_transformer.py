@@ -46,8 +46,8 @@ class selfAttentionModel(nn.Module):
         embeddings = embeddings.view(bz,nf,-1)
         ss_task_feats = self.ss_task(feature_conv) # a tensor of size [32,7*7] is returned
         feats_ss = ss_task_feats.view(bz, nf, 7*7) #now that it is a regression problem no more 2 and no more softmax needed
-        emb_CAM = torch.cat((embeddings, attentionMAP), -1)
-        embeddings_CAM_ss = torch.cat((emb_CAM, feats_ss), -1)
+        emb_CAM = torch.cat((embeddings, attentionMAP), -1) # concatenate the attention map to know where the resnet is focusing
+        embeddings_CAM_ss = torch.cat((emb_CAM, feats_ss), -1) # also concatenate the motion map to know where the motion is happening
         #print(embeddings_CAM_ss.size())
         logit = self.transf(embeddings_CAM_ss)
         final_logit = self.fc(logit.cuda())
