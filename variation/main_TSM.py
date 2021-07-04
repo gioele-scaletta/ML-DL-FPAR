@@ -1,9 +1,9 @@
 from __future__ import print_function, division
-from transformerModel import *
-from spatial_transforms import (Compose, ToTensor, CenterCrop, Scale, Normalize, MultiScaleCornerCrop,
+from model_TSM import *
+from spatial_transforms_self_super import (Compose, ToTensor, CenterCrop, Scale, Normalize, MultiScaleCornerCrop,
                                 RandomHorizontalFlip)
 from tensorboardX import SummaryWriter
-from makeDatasetRGB import *
+from makeDatasetMMAPS import *
 import argparse
 import sys
 
@@ -87,6 +87,10 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
         params.requires_grad = True
         train_params += [params]
     
+    for params in model.ss_task.parameters():
+        params.requires_grad = True
+        train_params += [params]
+    
     #Train the final classifier
     for params in model.fc.parameters():
         params.requires_grad = True
@@ -99,11 +103,10 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
     model.resNet.layer4[2].conv1.train(True)
     model.resNet.layer4[2].conv2.train(True)
     model.resNet.fc.train(True)
+    model.ss_task.train(True)
     model.fc.train(True)
     
     model.cuda()
-
-
 
     loss_fn = nn.CrossEntropyLoss()
 
@@ -129,23 +132,29 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
         model.resNet.layer4[2].conv1.train(True)
         model.resNet.layer4[2].conv2.train(True)
         model.resNet.fc.train(True)
+        model.ss_task.train(True)
         model.fc.train(True)
         
-        for i, (inputs, targets) in enumerate(train_loader):
+        for i, (inputs, inputs_mmaps, targets) in enumerate(train_loader):
             train_iter += 1
             iterPerEpoch += 1
             optimizer_fn.zero_grad()
             input_frames = Variable(inputs.to(DEVICE))
+            mmapsVariable = Variable(inputs_MMAPS.to(DEVICE))
             ground_truth = Variable(targets.to(DEVICE))
             trainSamples += inputs.size(0)
-
-            logits = model(input_frames)
-            loss = loss_fn(logits, ground_truth)
-            loss.backward()
+            
+            logits, predicted_mmaps = model(input_frames)
+            tot_loss = loss_fn(logits, ground_truth)
+            mmaps_target = mmapsVariable.contiguous().view(-1)
+            mmaps_predicted = predicted_mmaps.contiguous().view(-1)
+            loss_mmaps_TOT = loss_mmaps(mmaps_predicted, mmaps_target.to(DEVICE))
+            tot_loss = tot_loss + loss_mmaps_TOT
+            tot_loss.backward()
             optimizer_fn.step()
             _, predicted = torch.max(logits.data, 1)
             numCorrTrain += (predicted == targets.to(DEVICE)).sum()
-            epoch_loss += loss.item()
+            epoch_loss += tot_loss.item()
           
         optim_scheduler.step()
         avg_loss = epoch_loss/iterPerEpoch
@@ -164,7 +173,7 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
                 val_iter = 0
                 val_samples = 0
                 numCorr = 0
-                for j, (inputs, targets) in enumerate(val_loader):
+                for j, (inputs, _, targets) in enumerate(val_loader):
                     val_iter += 1
                     val_samples += inputs.size(0)
                     inputVariable = Variable(inputs.to(DEVICE))
