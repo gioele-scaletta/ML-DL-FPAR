@@ -59,6 +59,13 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
         for params in model.parameters():
             params.requires_grad = False
             
+    else:
+        model = selfAttentionModel(num_classes=num_classes, mem_size=memSize, num_frames=seqLen)
+        model.load_state_dict(torch.load(stage1_dict), strict=True)
+        model.train(False)
+        for params in model.parameters():
+            params.requires_grad = False
+            
         for params in model.resNet.layer4[0].conv1.parameters():
             params.requires_grad = True
             train_params += [params]
@@ -95,6 +102,8 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
         model.resNet.layer4[2].conv2.train(True)
         model.resNet.fc.train(True)
     
+    
+    #when concatenating, the ss task has to be trained from the first stage
     for params in model.ss_task.parameters():
         params.requires_grad = True
         train_params += [params]
@@ -111,7 +120,7 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
         
     model.transf.train(True)
     model.ss_task.train(True)
-    model.fc.train(True)
+    model.classifier.train(True)
     
     model.cuda()
 
