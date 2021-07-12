@@ -50,5 +50,5 @@ class selfAttentionModel(nn.Module):
         embeddings_CAM_ss = torch.cat((emb_CAM, feats_ss), -1) # also concatenate the motion map to know where the motion is happening
         #print(embeddings_CAM_ss.size())
         logit = self.transf(embeddings_CAM_ss)
-        final_logit = self.fc(logit.cuda())
+        final_logit = self.classifier(logit.cuda())
         return final_logit, feats_ss
