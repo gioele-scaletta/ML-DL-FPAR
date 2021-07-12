@@ -1,5 +1,5 @@
 from __future__ import print_function, division
-from model_new_transformer import *
+from model_transf_only_CAM import *
 from spatial_transforms import (Compose, ToTensor, CenterCrop, Scale, Normalize, MultiScaleCornerCrop,
                                 RandomHorizontalFlip)
 from tensorboardX import SummaryWriter
@@ -110,12 +110,12 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
         train_params += [params]
       
       #Train the final classifier
-    for params in model.fc.parameters():
+    for params in model.classifier.parameters():
         params.requires_grad = True
         train_params += [params]    
 
     model.transf.train(True)
-    model.fc.train(True)
+    model.classifier.train(True)
     
     model.cuda()
 
@@ -146,7 +146,7 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
             model.resNet.layer4[2].conv2.train(True)
             model.resNet.fc.train(True)
         model.transf.train(True)
-        model.fc.train(True)
+        model.classifier.train(True)
         
         for i, (inputs, targets) in enumerate(train_loader):
             train_iter += 1
