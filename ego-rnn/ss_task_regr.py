@@ -3,18 +3,13 @@ import math
 import torch
 from torch.nn.functional import sigmoid, softmax, relu
 
-def conv1x1(in_planes, out_planes, kernel_size=1, stride=1, padding=0):
-    return nn.Conv2d(in_channels=in_planes, out_channels=out_planes, kernel_size=kernel_size, stride=stride, padding=padding, bias=False)
-
 class ss_task(nn.Module):
     def __init__(self):
         super(ss_task, self).__init__()
         self.conv = nn.Conv2d(in_channels=512, out_channels=100, kernel_size=1, stride=1, padding=0, bias=False)
         self.fc = nn.Linear(100*7*7,  7*7)
         nn.init.xavier_normal_(self.fc.weight)
-        nn.init.constant_(self.fc.bias, 0)
         nn.init.xavier_normal_(self.conv.weight)
-        nn.init.constant_(self.conv.bias, 0)
         
         #suggested by professor
         #feat (BS,512x7x7) --> relu() = feat (BS,512x7x7)
