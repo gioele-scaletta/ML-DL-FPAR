@@ -1,2 +1,0 @@
-        feats = nn.Sequential(*list(model.mobileNet.features.children())[:3]).children()
-        print(list(list(feats)[1].conv.children())[0][0])
