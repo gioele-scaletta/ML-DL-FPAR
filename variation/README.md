@@ -11,6 +11,7 @@ The variation we propose is to replace the ConvLSTM, which is largely used in Fi
 ![drawing](proposed_variation.png)
 
 
+## Note
 - main_new_transformer.py is for concatenated CAM and predited motion maps.
 - main_transformer_two_stages.py is without concatenation, with and without the self-supervised task.
 
