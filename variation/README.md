@@ -16,6 +16,7 @@ The variation we propose is to replace the ConvLSTM, which is largely used in Fi
 - main_transformer_two_stages.py is without concatenation, with and without the self-supervised task.
 
 
+## Visualization of the CAM improvement with and without the self-supervised task
 RGB Attention  |  SS_Task
 :-------------------------:|:-------------------------:
 ![](attention7frame.gif)| ![](ssTask.gif)
