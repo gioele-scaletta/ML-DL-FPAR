@@ -6,6 +6,8 @@ This git contains the source code associated with our project, built upon the pa
 The variation we propose is to replace the ConvLSTM, which is largely used in First Person Action Recognition, with a transformer, that has had a great success in Natural Language Processing, and now is being explored as an option in Computer Vision. The paper is available [here](https://github.com/gioele-scaletta/ML-DL-FPAR/blob/main/variation/project_paper.pdf)
 
 
+
+#Architecure
 ![drawing](proposed_variation.png)
 
 
