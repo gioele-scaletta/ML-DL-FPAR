@@ -21,3 +21,9 @@ RGB Attention  |  SS_Task
 - main_new_transformer.py is for concatenated CAM and predited motion maps.
 - main_transformer_two_stages.py is without concatenation, with and without the self-supervised task.
 
+ **Configurations**            | **MParams** | **GMACS** | **Accuracy (%)** 
+-------------------------------|-------------|-----------|------------------
+ ConvLSTM SS\-regression       | 40\.73      | 32\.17    | 68\.1            
+ Transformer CAM attention     | 51\.23      | 25\.75    | 65\.51           
+ Transformer concat SS and CAM | 57\.15      | 25\.79    | 59\.48           
+
