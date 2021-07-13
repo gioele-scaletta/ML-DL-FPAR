@@ -5,6 +5,7 @@ This git contains the source code associated with our project, built upon the pa
 ["Self-Supervised Joint Encoding of Motion and Appearance for First Person Action Recognition"](https://arxiv.org/pdf/2002.03982.pdf)
 The variation we propose is to replace the ConvLSTM, which is largely used in First Person Action Recognition, with a transformer, that has had a great success in Natural Language Processing, and now is being explored as an option in Computer Vision.
 
+![drawing](proposed_variation.png)
 
 
 - main_new_transformer.py is for concatenated CAM and predited motion maps.
