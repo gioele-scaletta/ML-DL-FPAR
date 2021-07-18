@@ -159,10 +159,10 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
             
             output_label, _ , predicted_mmaps = model(inputVariable)
             loss_rgb = loss_fn(output_label, labelVariable)
-            
+            tot_loss = loss_rgb
             if stage == 2: 
                 loss_mmaps = loss_fn(nn.functional.softmax(predicted_mmaps,dim=1), nn.functional.interpolate(mmapsVariable, size=(7,7), mode='bilinear'))
-                tot_loss = loss_rgb + loss_mmaps
+                tot_loss += loss_mmaps
             
             tot_loss.backward()
             optimizer_fn.step()
