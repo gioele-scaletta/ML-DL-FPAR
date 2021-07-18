@@ -148,23 +148,18 @@ def main_run( stage, train_data_dir, val_data_dir, stage1_dict, out_dir, seqLen,
             model.resNet.layer4[2].conv1.train(True)
             model.resNet.layer4[2].conv2.train(True)
             model.resNet.fc.train(True)
-        for i, (inputs, inputs_MMAPS, targets) in enumerate(train_loader):
+        for i, (inputs, targets) in enumerate(train_loader):
             train_iter += 1
             iterPerEpoch += 1
             optimizer_fn.zero_grad()
             inputVariable = Variable(inputs.permute(1, 0, 2, 3, 4).to(DEVICE))
-            mmapsVariable = Variable(inputs_MMAPS.permute(1, 0, 2, 3, 4).to(DEVICE))
             labelVariable = Variable(targets.to(DEVICE))
             trainSamples += inputs.size(0) #val_samples 
             
             output_label, _ , predicted_mmaps = model(inputVariable)
             loss_rgb = loss_fn(output_label, labelVariable)
-            tot_loss = loss_rgb
-            if stage == 2: 
-                loss_mmaps = loss_fn(nn.functional.softmax(predicted_mmaps,dim=1), nn.functional.interpolate(mmapsVariable, size=(7,7), mode='bilinear'))
-                tot_loss += loss_mmaps
             
-            tot_loss.backward()
+            loss_rgb.backward()
             optimizer_fn.step()
             _, predicted = torch.max(output_label.data, 1)
             numCorrTrain += (predicted == targets.to(DEVICE)).sum()
