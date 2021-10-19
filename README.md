@@ -1,12 +1,15 @@
 # Machine Learning and Deep Learning Project on First Person Action Recognition
 
+The project consisted in exploring the state of the art in first person action recognition as well as proposing our own variation to the analysed architectures. Concerning our variation, we embraced the Computer Vision recent research trend of replacing the convLSTM (largely used in First Person Action Recognition) with the transformer architecture following the great success achieved in Natural Language Processing.
+
+The project was developed using PyTorch by Gennaro Petito, Gioele Scaletta and Andrea Parolin as part of the course Machine Learning and Deep Learning taught by Professor Barbara Caputo.
+
+The paper explaining our project is available [here](https://github.com/gioele-scaletta/ML-DL-FPAR/blob/main/variation/project_paper.pdf)
+
 This git contains the source code associated with our project, built upon the papers:
 
 * ["Attention is All We Need: Nailing Down Object-centric Attention for Egocentric Activity Recognition"](https://arxiv.org/pdf/1807.11794.pdf)
 * ["Self-Supervised Joint Encoding of Motion and Appearance for First Person Action Recognition"](https://arxiv.org/pdf/2002.03982.pdf)
-
-The variation we propose is to replace the ConvLSTM, which is largely used in First Person Action Recognition, with a transformer, that has had a great success in Natural Language Processing, and now is being explored as an option in Computer Vision. The paper is available [here](https://github.com/gioele-scaletta/ML-DL-FPAR/blob/main/variation/project_paper.pdf)
-
 
 
 ## Architecure
