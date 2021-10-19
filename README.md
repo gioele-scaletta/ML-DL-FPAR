@@ -23,7 +23,7 @@ RGB Attention  |  SS_Task
 
 
 ## Note
-- main_new_transformer.py is for concatenated CAM and predited motion maps.
+- main_new_transformer.py is for concatenated CAM and predicted motion maps.
 - main_transformer_two_stages.py is without concatenation, with and without the self-supervised task.
 
 
